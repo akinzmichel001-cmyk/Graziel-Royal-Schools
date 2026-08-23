@@ -1,0 +1,6 @@
+{
+  "name": "Graziel Royal Schools",
+  "description": "Official mobile portal for Graziel Royal Schools: report cards, attendance, fee payments, timetables, assignments, announcements, admissions, and student management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

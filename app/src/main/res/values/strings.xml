@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Graziel Royal Schools</string>
+    <string name="school_address">Opo-Ibogun, Ifo, Ogun State, Nigeria</string>
+    <string name="school_founder">Mr. Tobi Adebayo</string>
+    <string name="school_motto">Knowledge, Spirit and Service</string>
+    <string name="school_admin_phone">+2348166205113</string>
+    <string name="school_admin_phone_display">+234 816 620 5113</string>
+</resources>
