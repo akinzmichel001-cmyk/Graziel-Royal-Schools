@@ -36,7 +36,7 @@ import com.example.data.model.TeacherAccount
         StudentRecord::class,
         AdminSecurityConfig::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class SchoolDatabase : RoomDatabase() {
@@ -54,6 +54,7 @@ abstract class SchoolDatabase : RoomDatabase() {
                     "graziel_royal_school_db"
                 )
                     .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                 INSTANCE = instance
                 instance

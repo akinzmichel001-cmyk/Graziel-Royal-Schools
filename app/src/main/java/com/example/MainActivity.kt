@@ -49,7 +49,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        try {
+            enableEdgeToEdge()
+        } catch (t: Throwable) {
+            // Safe fallback for older Android versions and custom OEM ROMs
+        }
         setContent {
             GrazielRoyalTheme {
                 GrazielRoyalApp(viewModel = viewModel)

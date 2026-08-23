@@ -36,7 +36,13 @@ class FirebaseAuthRepository(private val context: Context) {
         }
 
     val currentUser: FirebaseUser?
-        get() = auth?.currentUser
+        get() {
+            return try {
+                auth?.currentUser
+            } catch (t: Throwable) {
+                null
+            }
+        }
 
     suspend fun signInWithEmail(email: String, password: String): AuthResult<FirebaseUser> {
         val authInstance = auth

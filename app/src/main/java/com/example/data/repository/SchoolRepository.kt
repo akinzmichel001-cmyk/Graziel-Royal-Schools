@@ -93,7 +93,13 @@ class SchoolRepository(private val dao: SchoolDao) {
     )
 
     suspend fun seedInitialDataIfEmpty() {
-        // Initial announcements
+        try {
+            val existingAdmin = dao.getAdminSecurityConfigOnce()
+            if (existingAdmin != null) {
+                return // Database is already seeded
+            }
+
+            // Initial announcements
         val initialAnnouncements = listOf(
             Announcement(
                 id = 1,
@@ -812,6 +818,9 @@ class SchoolRepository(private val dao: SchoolDao) {
         dao.insertTeacherAccounts(initialTeachers)
         dao.insertStudentRecords(initialStudents)
         dao.insertAdminSecurityConfig(initialAdminConfig)
+        } catch (e: Exception) {
+            android.util.Log.e("SchoolRepository", "Error seeding initial database: ${e.message}", e)
+        }
     }
 
     // Role & Passkey Authentication Methods
