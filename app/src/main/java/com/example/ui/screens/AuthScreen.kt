@@ -119,7 +119,7 @@ fun AuthScreen(
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
     var classOrDesignationInput by remember { mutableStateOf("") }
-    var phoneInput by remember { mutableStateOf("+234 802 345 6789") }
+    var phoneInput by remember { mutableStateOf("+234 816 620 5113") }
     var childNameInput by remember { mutableStateOf("Adeleke David Oluwaseun") }
 
     val defaultAccounts = viewModel.getDefaultAccounts()

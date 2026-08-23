@@ -70,7 +70,7 @@ class SchoolRepository(private val dao: SchoolDao) {
             regOrStaffId = "GRS/2024/0428",
             assignedClass = "SS 1 Science",
             titleOrDesignation = "Student (Science Track - Class Head)",
-            phone = "+234 802 345 6789"
+            phone = "+234 816 620 5113"
         ),
         UserAccount(
             id = 4,
@@ -82,7 +82,7 @@ class SchoolRepository(private val dao: SchoolDao) {
             childName = "Adeleke David Oluwaseun",
             childRegNumber = "GRS/2024/0428",
             titleOrDesignation = "Parent / Guardian",
-            phone = "+234 802 345 6789"
+            phone = "+234 816 620 5113"
         )
     )
 

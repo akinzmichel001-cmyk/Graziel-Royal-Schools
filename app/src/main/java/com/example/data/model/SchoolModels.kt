@@ -20,7 +20,7 @@ data class UserAccount(
     val assignedClass: String, // e.g. "SS 1 Science", "All Classes", "JSS 2 Gold"
     val childName: String? = null,
     val childRegNumber: String? = null,
-    val phone: String = "+234 802 345 6789",
+    val phone: String = "+234 816 620 5113",
     val titleOrDesignation: String = "",
     val isMuted: Boolean = false
 )
