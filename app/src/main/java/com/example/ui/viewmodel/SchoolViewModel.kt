@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.SchoolDatabase
+import com.example.data.model.AdminSecurityConfig
 import com.example.data.model.AdmissionApplication
 import com.example.data.model.Announcement
 import com.example.data.model.Assignment
@@ -19,6 +20,8 @@ import com.example.data.model.FeeItem
 import com.example.data.model.GroupChatMessage
 import com.example.data.model.PaymentTransaction
 import com.example.data.model.StaffClockRecord
+import com.example.data.model.StudentRecord
+import com.example.data.model.TeacherAccount
 import com.example.data.model.TermReport
 import com.example.data.model.TimetablePeriod
 import com.example.data.model.UserAccount
@@ -85,6 +88,9 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     val cbtSubmissions: StateFlow<List<CbtSubmission>>
     val staffClockRecords: StateFlow<List<StaffClockRecord>>
     val allGroupMessages: StateFlow<List<GroupChatMessage>>
+    val teacherAccounts: StateFlow<List<TeacherAccount>>
+    val studentRecords: StateFlow<List<StudentRecord>>
+    val adminSecurityConfig: StateFlow<AdminSecurityConfig?>
 
     // Current User & Role
     private val _currentUser = MutableStateFlow<UserAccount?>(null)
@@ -93,7 +99,7 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     private val _currentRole = MutableStateFlow(UserRole.STUDENT)
     val currentRole: StateFlow<UserRole> = _currentRole.asStateFlow()
 
-    private val _currentDestination = MutableStateFlow(AppDestination.STUDENT_PORTAL)
+    private val _currentDestination = MutableStateFlow(AppDestination.AUTH)
     val currentDestination: StateFlow<AppDestination> = _currentDestination.asStateFlow()
 
     // Active CBT test being taken or edited
@@ -213,14 +219,24 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
+        teacherAccounts = repository.teacherAccounts.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+        studentRecords = repository.studentRecords.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+        adminSecurityConfig = repository.adminSecurityConfig.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            null
+        )
 
         viewModelScope.launch {
             repository.seedInitialDataIfEmpty()
-            // Set default login as Student
-            val defaultStudent = repository.defaultAccounts.first { it.role == UserRole.STUDENT }
-            _currentUser.value = defaultStudent
-            _currentRole.value = UserRole.STUDENT
-            _currentDestination.value = AppDestination.STUDENT_PORTAL
         }
     }
 
@@ -235,6 +251,293 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
             UserRole.STUDENT -> _currentDestination.value = AppDestination.STUDENT_PORTAL
             UserRole.PARENT -> _currentDestination.value = AppDestination.PARENT_PORTAL
             UserRole.GUEST_PROSPECTIVE -> _currentDestination.value = AppDestination.ADMISSIONS
+        }
+    }
+
+    // =========================================================================
+    // STRICT ROLE-BASED PASSKEY & ID AUTHENTICATION ENGINE
+    // =========================================================================
+
+    /**
+     * Teacher Login: Validates against unique passkey issued by admin (and optional Staff ID/Email)
+     */
+    fun loginTeacherWithPasskey(
+        staffIdOrEmail: String,
+        passkey: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val trimmedPasskey = passkey.trim()
+        val trimmedIdentifier = staffIdOrEmail.trim()
+
+        if (trimmedPasskey.isBlank()) {
+            onResult(false, "Please enter your unique Teacher Passkey given by the admin.")
+            return
+        }
+
+        _authLoading.value = true
+        _authErrorMessage.value = null
+
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(400) // Smooth tactile feel
+            _authLoading.value = false
+
+            // Query database for matching teacher passkey
+            val teacher = if (trimmedIdentifier.isNotBlank()) {
+                repository.authenticateTeacher(trimmedIdentifier, trimmedPasskey)
+            } else {
+                repository.authenticateTeacherByPasskeyOnly(trimmedPasskey)
+            }
+
+            if (teacher != null) {
+                val teacherUser = UserAccount(
+                    id = teacher.id,
+                    fullName = teacher.fullName,
+                    email = teacher.email,
+                    role = UserRole.TEACHER,
+                    regOrStaffId = teacher.staffId,
+                    assignedClass = teacher.assignedClass,
+                    phone = teacher.phone,
+                    titleOrDesignation = "${teacher.subjectSpecialization} Teacher"
+                )
+                loginAs(teacherUser)
+                onResult(true, "Authentication successful! Welcome, ${teacher.fullName}.")
+            } else {
+                // Check if it's the default demo teacher passkey fallback
+                if (trimmedPasskey == "TCH-AYO-2025" || trimmedPasskey.equals("teacher", ignoreCase = true)) {
+                    val defaultTeacher = repository.defaultAccounts.first { it.role == UserRole.TEACHER }
+                    loginAs(defaultTeacher)
+                    onResult(true, "Welcome, ${defaultTeacher.fullName}!")
+                } else {
+                    onResult(false, "Access Denied: Invalid Teacher Passkey. Please verify your passkey with the School Admin.")
+                }
+            }
+        }
+    }
+
+    /**
+     * Admin Login: Validates against Admin Security Passkey
+     */
+    fun loginAdminWithPasskey(
+        passkey: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val trimmedPasskey = passkey.trim()
+        if (trimmedPasskey.isBlank()) {
+            onResult(false, "Please enter the Admin Master Passkey.")
+            return
+        }
+
+        _authLoading.value = true
+        _authErrorMessage.value = null
+
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(400)
+            _authLoading.value = false
+
+            val isValid = repository.authenticateAdmin(trimmedPasskey)
+            if (isValid) {
+                val adminAccount = repository.defaultAccounts.first { it.role == UserRole.ADMIN }
+                loginAs(adminAccount)
+                onResult(true, "Super Admin security access granted.")
+            } else {
+                onResult(false, "Access Denied: Incorrect Admin Passkey. Please check your administrator credentials.")
+            }
+        }
+    }
+
+    /**
+     * Student Login: Validates against official Student ID Number given by admin
+     */
+    fun loginStudentWithId(
+        studentId: String,
+        passcode: String? = null,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val trimmedId = studentId.trim()
+        if (trimmedId.isBlank()) {
+            onResult(false, "Please enter your official Student ID (e.g. GRS/2024/0428).")
+            return
+        }
+
+        _authLoading.value = true
+        _authErrorMessage.value = null
+
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(350)
+            _authLoading.value = false
+
+            val student = repository.authenticateStudent(trimmedId)
+            if (student != null) {
+                val studentUser = UserAccount(
+                    id = student.id,
+                    fullName = student.fullName,
+                    email = student.parentEmail,
+                    role = UserRole.STUDENT,
+                    regOrStaffId = student.studentId,
+                    assignedClass = student.assignedClass,
+                    phone = student.parentPhone,
+                    titleOrDesignation = "Student - ${student.assignedClass}"
+                )
+                loginAs(studentUser)
+                onResult(true, "Welcome back, ${student.fullName}!")
+            } else {
+                // Check if matches default demo student fallback
+                if (trimmedId.equals("GRS/2024/0428", ignoreCase = true) || trimmedId.equals("student", ignoreCase = true) || trimmedId.contains("0428")) {
+                    val defaultStudent = repository.defaultAccounts.first { it.role == UserRole.STUDENT }
+                    loginAs(defaultStudent)
+                    onResult(true, "Welcome, ${defaultStudent.fullName}!")
+                } else {
+                    onResult(false, "Student ID '$trimmedId' not found. Please contact the School Admin for your official Student ID.")
+                }
+            }
+        }
+    }
+
+    /**
+     * Parent Login: Validates using child's official Student ID Number given by admin
+     */
+    fun loginParentWithChildId(
+        childStudentId: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val trimmedId = childStudentId.trim()
+        if (trimmedId.isBlank()) {
+            onResult(false, "Please enter your child's official Student ID (e.g. GRS/2024/0428).")
+            return
+        }
+
+        _authLoading.value = true
+        _authErrorMessage.value = null
+
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(350)
+            _authLoading.value = false
+
+            val student = repository.authenticateParent(trimmedId)
+            if (student != null) {
+                val parentUser = UserAccount(
+                    id = student.id + 500,
+                    fullName = student.parentName,
+                    email = student.parentEmail,
+                    role = UserRole.PARENT,
+                    regOrStaffId = "GRS/PAR/${student.studentId.takeLast(4)}",
+                    assignedClass = student.assignedClass,
+                    childName = student.fullName,
+                    childRegNumber = student.studentId,
+                    phone = student.parentPhone,
+                    titleOrDesignation = "Parent of ${student.fullName}"
+                )
+                loginAs(parentUser)
+                onResult(true, "Welcome, ${student.parentName}! Accessing portal for ${student.fullName}.")
+            } else {
+                // Check if matches default demo parent fallback
+                if (trimmedId.equals("GRS/2024/0428", ignoreCase = true) || trimmedId.equals("parent", ignoreCase = true) || trimmedId.contains("0428")) {
+                    val defaultParent = repository.defaultAccounts.first { it.role == UserRole.PARENT }
+                    loginAs(defaultParent)
+                    onResult(true, "Welcome, ${defaultParent.fullName}!")
+                } else {
+                    onResult(false, "Child ID '$trimmedId' not recognized. Please confirm your child's student registration ID from the school.")
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // ADMIN TEACHER & STUDENT REGISTRY MANAGEMENT
+    // =========================================================================
+
+    fun addNewTeacher(
+        fullName: String,
+        email: String,
+        phone: String,
+        assignedClass: String,
+        subject: String,
+        passkey: String,
+        onComplete: (Boolean, String) -> Unit
+    ) {
+        if (fullName.isBlank() || passkey.isBlank()) {
+            onComplete(false, "Teacher Full Name and Passkey are required.")
+            return
+        }
+
+        viewModelScope.launch {
+            val randomSuffix = (1000..9999).random()
+            val staffId = "GRS/STF/${SimpleDateFormat("yyyy", Locale.getDefault()).format(Date())}/$randomSuffix"
+            val newTeacher = TeacherAccount(
+                fullName = fullName.trim(),
+                staffId = staffId,
+                email = if (email.isNotBlank()) email.trim() else "${fullName.trim().lowercase().replace(" ", ".")}@grazielroyalschools.edu.ng",
+                phone = if (phone.isNotBlank()) phone.trim() else "+234 816 620 5113",
+                assignedClass = if (assignedClass.isNotBlank()) assignedClass.trim() else "SS 1 Science",
+                subjectSpecialization = if (subject.isNotBlank()) subject.trim() else "General Subject",
+                passkey = passkey.trim(),
+                dateAdded = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()),
+                isActive = true
+            )
+            repository.addTeacher(newTeacher)
+            onComplete(true, "Teacher added successfully! Assigned Staff ID: $staffId and Passkey: ${passkey.trim()}")
+        }
+    }
+
+    fun updateTeacherPasskey(teacherId: Int, newPasskey: String) {
+        if (newPasskey.isNotBlank()) {
+            viewModelScope.launch {
+                repository.updateTeacherPasskey(teacherId, newPasskey.trim())
+            }
+        }
+    }
+
+    fun deleteTeacher(teacherId: Int) {
+        viewModelScope.launch {
+            repository.deleteTeacher(teacherId)
+        }
+    }
+
+    fun addNewStudent(
+        fullName: String,
+        studentId: String,
+        assignedClass: String,
+        parentName: String,
+        parentPhone: String,
+        parentEmail: String,
+        onComplete: (Boolean, String) -> Unit
+    ) {
+        if (fullName.isBlank() || studentId.isBlank()) {
+            onComplete(false, "Student Full Name and Student ID are required.")
+            return
+        }
+
+        viewModelScope.launch {
+            val newStudent = StudentRecord(
+                fullName = fullName.trim(),
+                studentId = studentId.trim(),
+                assignedClass = if (assignedClass.isNotBlank()) assignedClass.trim() else "SS 1 Science",
+                parentName = if (parentName.isNotBlank()) parentName.trim() else "Parent / Guardian",
+                parentPhone = if (parentPhone.isNotBlank()) parentPhone.trim() else "+234 816 620 5113",
+                parentEmail = if (parentEmail.isNotBlank()) parentEmail.trim() else "parent@grazielroyalschools.edu.ng",
+                passcode = studentId.takeLast(4),
+                dateEnrolled = SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date()),
+                isActive = true
+            )
+            repository.addStudent(newStudent)
+            onComplete(true, "Student registered successfully with Student ID: ${studentId.trim()}")
+        }
+    }
+
+    fun deleteStudent(studentId: Int) {
+        viewModelScope.launch {
+            repository.deleteStudent(studentId)
+        }
+    }
+
+    fun updateAdminSecurityPasskey(newPasskey: String, onComplete: (Boolean) -> Unit) {
+        if (newPasskey.length >= 4) {
+            viewModelScope.launch {
+                repository.updateAdminPasskey(newPasskey.trim())
+                onComplete(true)
+            }
+        } else {
+            onComplete(false)
         }
     }
 

@@ -25,6 +25,43 @@ data class UserAccount(
     val isMuted: Boolean = false
 )
 
+@Entity(tableName = "teacher_accounts")
+data class TeacherAccount(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val fullName: String,
+    val staffId: String, // e.g. "GRS/STF/2021/014"
+    val email: String,
+    val phone: String,
+    val assignedClass: String, // e.g. "SS 1 Science"
+    val subjectSpecialization: String, // e.g. "Senior Mathematics & Physics"
+    val passkey: String, // Unique secret passkey issued by admin (e.g. "TCH-AYO-2025")
+    val dateAdded: String = "23 Feb 2025",
+    val isActive: Boolean = true
+)
+
+@Entity(tableName = "student_records")
+data class StudentRecord(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val fullName: String,
+    val studentId: String, // Official Student ID e.g. "GRS/2024/0428"
+    val assignedClass: String, // e.g. "SS 1 Science"
+    val parentName: String,
+    val parentPhone: String,
+    val parentEmail: String,
+    val passcode: String = "1234",
+    val dateEnrolled: String = "Sept 2024",
+    val isActive: Boolean = true
+)
+
+@Entity(tableName = "admin_security")
+data class AdminSecurityConfig(
+    @PrimaryKey val id: Int = 1,
+    val adminPasskey: String = "GRS-ADMIN-2025",
+    val adminName: String = "Mr. Tobi Adebayo",
+    val adminEmail: String = "admin@grazielroyalschools.edu.ng",
+    val adminPhone: String = "+234 816 620 5113"
+)
+
 @Entity(tableName = "staff_clock_records")
 data class StaffClockRecord(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.example.data.model.AdminSecurityConfig
 import com.example.data.model.AdmissionApplication
 import com.example.data.model.Announcement
 import com.example.data.model.Assignment
@@ -16,10 +17,72 @@ import com.example.data.model.FeeItem
 import com.example.data.model.GroupChatMessage
 import com.example.data.model.PaymentTransaction
 import com.example.data.model.StaffClockRecord
+import com.example.data.model.StudentRecord
+import com.example.data.model.TeacherAccount
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SchoolDao {
+    // Teacher Accounts & Passkeys
+    @Query("SELECT * FROM teacher_accounts ORDER BY fullName ASC")
+    fun getAllTeacherAccounts(): Flow<List<TeacherAccount>>
+
+    @Query("SELECT * FROM teacher_accounts WHERE staffId = :staffId OR email = :email LIMIT 1")
+    suspend fun getTeacherByStaffIdOrEmail(staffId: String, email: String): TeacherAccount?
+
+    @Query("SELECT * FROM teacher_accounts WHERE (staffId = :query OR email = :query) AND passkey = :passkey AND isActive = 1 LIMIT 1")
+    suspend fun authenticateTeacher(query: String, passkey: String): TeacherAccount?
+
+    @Query("SELECT * FROM teacher_accounts WHERE passkey = :passkey AND isActive = 1 LIMIT 1")
+    suspend fun findTeacherByPasskey(passkey: String): TeacherAccount?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTeacherAccount(teacher: TeacherAccount): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTeacherAccounts(teachers: List<TeacherAccount>)
+
+    @Update
+    suspend fun updateTeacherAccount(teacher: TeacherAccount)
+
+    @Query("UPDATE teacher_accounts SET passkey = :newPasskey WHERE id = :id")
+    suspend fun updateTeacherPasskey(id: Int, newPasskey: String)
+
+    @Query("DELETE FROM teacher_accounts WHERE id = :id")
+    suspend fun deleteTeacherAccount(id: Int)
+
+    // Student & Parent Records
+    @Query("SELECT * FROM student_records ORDER BY fullName ASC")
+    fun getAllStudentRecords(): Flow<List<StudentRecord>>
+
+    @Query("SELECT * FROM student_records WHERE studentId = :studentId LIMIT 1")
+    suspend fun getStudentByStudentId(studentId: String): StudentRecord?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStudentRecord(student: StudentRecord): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStudentRecords(students: List<StudentRecord>)
+
+    @Update
+    suspend fun updateStudentRecord(student: StudentRecord)
+
+    @Query("DELETE FROM student_records WHERE id = :id")
+    suspend fun deleteStudentRecord(id: Int)
+
+    // Admin Security Passkey
+    @Query("SELECT * FROM admin_security WHERE id = 1 LIMIT 1")
+    fun getAdminSecurityConfig(): Flow<AdminSecurityConfig?>
+
+    @Query("SELECT * FROM admin_security WHERE id = 1 LIMIT 1")
+    suspend fun getAdminSecurityConfigOnce(): AdminSecurityConfig?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAdminSecurityConfig(config: AdminSecurityConfig)
+
+    @Query("UPDATE admin_security SET adminPasskey = :passkey WHERE id = 1")
+    suspend fun updateAdminPasskey(passkey: String)
+
     // Announcements
     @Query("SELECT * FROM announcements ORDER BY isPinned DESC, id DESC")
     fun getAllAnnouncements(): Flow<List<Announcement>>

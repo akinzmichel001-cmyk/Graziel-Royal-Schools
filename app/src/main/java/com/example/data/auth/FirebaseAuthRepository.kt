@@ -20,7 +20,7 @@ class FirebaseAuthRepository(private val context: Context) {
         get() {
             return try {
                 FirebaseApp.getApps(context).isNotEmpty()
-            } catch (e: Exception) {
+            } catch (t: Throwable) {
                 false
             }
         }
@@ -29,8 +29,8 @@ class FirebaseAuthRepository(private val context: Context) {
         get() {
             return try {
                 if (isFirebaseInitialized) FirebaseAuth.getInstance() else null
-            } catch (e: Exception) {
-                Log.w(tag, "FirebaseAuth instance not available: ${e.message}")
+            } catch (t: Throwable) {
+                Log.w(tag, "FirebaseAuth instance not available: ${t.message}")
                 null
             }
         }

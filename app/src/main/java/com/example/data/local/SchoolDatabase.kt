@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.data.model.AdminSecurityConfig
 import com.example.data.model.AdmissionApplication
 import com.example.data.model.Announcement
 import com.example.data.model.Assignment
@@ -15,6 +16,8 @@ import com.example.data.model.FeeItem
 import com.example.data.model.GroupChatMessage
 import com.example.data.model.PaymentTransaction
 import com.example.data.model.StaffClockRecord
+import com.example.data.model.StudentRecord
+import com.example.data.model.TeacherAccount
 
 @Database(
     entities = [
@@ -28,9 +31,12 @@ import com.example.data.model.StaffClockRecord
         CbtQuestion::class,
         CbtSubmission::class,
         StaffClockRecord::class,
-        GroupChatMessage::class
+        GroupChatMessage::class,
+        TeacherAccount::class,
+        StudentRecord::class,
+        AdminSecurityConfig::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class SchoolDatabase : RoomDatabase() {

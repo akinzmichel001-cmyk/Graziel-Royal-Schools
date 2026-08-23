@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -25,16 +28,26 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Publish
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeMute
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -65,11 +78,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.AdminSecurityConfig
 import com.example.data.model.CbtTest
 import com.example.data.model.FeeItem
+import com.example.data.model.StudentRecord
+import com.example.data.model.TeacherAccount
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
 import com.example.ui.theme.DarkBorder
@@ -107,9 +125,23 @@ fun AdminDashboardScreen(
     val staffClockRecords by viewModel.staffClockRecords.collectAsStateWithLifecycle()
     val isReportApproved by viewModel.isReportCardApproved.collectAsStateWithLifecycle()
     val isReportPublished by viewModel.isReportCardPublished.collectAsStateWithLifecycle()
+    val teacherAccounts by viewModel.teacherAccounts.collectAsStateWithLifecycle()
+    val studentRecords by viewModel.studentRecords.collectAsStateWithLifecycle()
+    val adminSecurityConfig by viewModel.adminSecurityConfig.collectAsStateWithLifecycle()
 
     var showCreateFeeDialog by remember { mutableStateOf(false) }
     var showBroadcastDialog by remember { mutableStateOf(false) }
+    var showAddTeacherDialog by remember { mutableStateOf(false) }
+    var showAddStudentDialog by remember { mutableStateOf(false) }
+    var showEditPasskeyDialogForTeacher by remember { mutableStateOf<TeacherAccount?>(null) }
+    var showChangeAdminPasskeyDialog by remember { mutableStateOf(false) }
+
+    fun copyToClipboard(label: String, text: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText(label, text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(context, "Copied to clipboard: $text", Toast.LENGTH_SHORT).show()
+    }
 
     LazyColumn(
         modifier = modifier
@@ -212,10 +244,498 @@ fun AdminDashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        StatPill("Active Staff", "${staffClockRecords.size + 4}", Emerald400)
-                        StatPill("CBT Tests", "${cbtTests.size}", Indigo400)
-                        StatPill("Fee Items", "${feeItems.size}", Amber400)
+                        StatPill("Faculty Staff", "${teacherAccounts.size}", Emerald400)
+                        StatPill("Enrolled Students", "${studentRecords.size}", Indigo400)
+                        StatPill("Fee Bills", "${feeItems.size}", Amber400)
                         StatPill("Approval", if (isReportApproved) "Ready" else "Pending", if (isReportApproved) Emerald400 else Rose400)
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // SECTION 1: TEACHER REGISTRY & UNIQUE PASSKEY ISSUANCE (CRITICAL FOR PRIVACY)
+        // =========================================================================
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Emerald500.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.VpnKey,
+                                        contentDescription = null,
+                                        tint = Emerald400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Teacher Registry & Passkey Issuance",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Only Admin can add teachers & issue passkeys",
+                                    fontSize = 11.sp,
+                                    color = Emerald400
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { showAddTeacherDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald500),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("admin_add_teacher_button")
+                        ) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = null, tint = DarkCanvas, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Add Teacher", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DarkCanvas)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "For strict privacy, each teacher must input their unique admin-assigned passkey to enter the Teacher Portal. Unauthorized users cannot enter.",
+                        fontSize = 12.sp,
+                        color = Slate400,
+                        lineHeight = 17.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (teacherAccounts.isEmpty()) {
+                        Text(
+                            text = "No teachers registered yet. Tap '+ Add Teacher' above.",
+                            fontSize = 12.sp,
+                            color = Slate400,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        teacherAccounts.forEach { teacher ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Slate900,
+                                border = BorderStroke(1.dp, DarkBorderSubtle),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 5.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = teacher.fullName,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Slate100
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = Emerald500.copy(alpha = 0.2f)
+                                                ) {
+                                                    Text(
+                                                        text = teacher.assignedClass,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = Emerald400,
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = "${teacher.subjectSpecialization} • Staff ID: ${teacher.staffId}",
+                                                fontSize = 11.sp,
+                                                color = Slate400
+                                            )
+                                            Text(
+                                                text = "Email: ${teacher.email} • Tel: ${teacher.phone}",
+                                                fontSize = 10.sp,
+                                                color = Slate500
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                viewModel.deleteTeacher(teacher.id)
+                                                Toast.makeText(context, "Teacher ${teacher.fullName} removed.", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete Teacher",
+                                                tint = Rose400.copy(alpha = 0.8f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Divider(color = DarkBorderSubtle.copy(alpha = 0.5f))
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Passkey Display Row
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(DarkCanvas, RoundedCornerShape(8.dp))
+                                            .border(BorderStroke(1.dp, Emerald500.copy(alpha = 0.3f)), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Key,
+                                                contentDescription = null,
+                                                tint = Amber400,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Passkey:",
+                                                fontSize = 11.sp,
+                                                color = Slate400
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = teacher.passkey,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Amber400,
+                                                letterSpacing = 1.sp
+                                            )
+                                        }
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = { copyToClipboard("Teacher Passkey", teacher.passkey) },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "Copy Passkey",
+                                                    tint = Slate300,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(4.dp))
+
+                                            IconButton(
+                                                onClick = { showEditPasskeyDialogForTeacher = teacher },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "Edit Passkey",
+                                                    tint = Indigo400,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // SECTION 2: STUDENT & PARENT ID REGISTRY (AUTHENTICATION IDENTIFIERS)
+        // =========================================================================
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Indigo500.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Indigo500.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.School,
+                                        contentDescription = null,
+                                        tint = Indigo400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Student & Parent ID Registry",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Official Student IDs for Student & Parent Login",
+                                    fontSize = 11.sp,
+                                    color = Indigo400
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { showAddStudentDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("admin_add_student_button")
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = Slate100, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Enroll Student", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Students and parents use the official admin-assigned Student ID (e.g. GRS/2024/0428) to enter their respective portals.",
+                        fontSize = 12.sp,
+                        color = Slate400,
+                        lineHeight = 17.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (studentRecords.isEmpty()) {
+                        Text(
+                            text = "No students registered yet.",
+                            fontSize = 12.sp,
+                            color = Slate400,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        studentRecords.forEach { student ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Slate900,
+                                border = BorderStroke(1.dp, DarkBorderSubtle),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = student.fullName,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Slate100
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Indigo500.copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = student.assignedClass,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Indigo400,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(2.dp))
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Student ID: ",
+                                                fontSize = 11.sp,
+                                                color = Slate400
+                                            )
+                                            Text(
+                                                text = student.studentId,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Amber400
+                                            )
+                                            IconButton(
+                                                onClick = { copyToClipboard("Student ID", student.studentId) },
+                                                modifier = Modifier.size(20.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "Copy Student ID",
+                                                    tint = Slate400,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Text(
+                                            text = "Parent: ${student.parentName} (${student.parentPhone})",
+                                            fontSize = 10.sp,
+                                            color = Slate500
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.deleteStudent(student.id)
+                                            Toast.makeText(context, "Student ${student.fullName} deleted.", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete Student",
+                                            tint = Rose400.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // SECTION 3: MASTER ADMIN PASSKEY SECURITY
+        // =========================================================================
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Rose500.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Rose500.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Security,
+                                        contentDescription = null,
+                                        tint = Rose400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Master Admin Passkey Security",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Protects the Super Admin Console",
+                                    fontSize = 11.sp,
+                                    color = Rose400
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { showChangeAdminPasskeyDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Rose500),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("admin_change_passkey_button")
+                        ) {
+                            Icon(Icons.Default.Key, contentDescription = null, tint = Slate100, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Change Key", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Slate900, RoundedCornerShape(10.dp))
+                            .border(BorderStroke(1.dp, DarkBorderSubtle), RoundedCornerShape(10.dp))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Current Admin Security Passkey:",
+                                fontSize = 11.sp,
+                                color = Slate400
+                            )
+                            Text(
+                                text = adminSecurityConfig?.adminPasskey ?: "GRS-ADMIN-2025",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Rose400,
+                                letterSpacing = 1.sp
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { copyToClipboard("Admin Passkey", adminSecurityConfig?.adminPasskey ?: "GRS-ADMIN-2025") },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copy Admin Key",
+                                tint = Slate300,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -660,6 +1180,358 @@ fun AdminDashboardScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showBroadcastDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: ADD NEW TEACHER & GENERATE PASSKEY
+    // =========================================================================
+    if (showAddTeacherDialog) {
+        var teacherName by remember { mutableStateOf("") }
+        var teacherEmail by remember { mutableStateOf("") }
+        var teacherPhone by remember { mutableStateOf("+234 816 620 5113") }
+        var teacherClass by remember { mutableStateOf("SS 1 Science") }
+        var teacherSubject by remember { mutableStateOf("Physics & Mathematics") }
+        var teacherPasskey by remember { mutableStateOf("TCH-${(1000..9999).random()}-2025") }
+
+        AlertDialog(
+            onDismissRequest = { showAddTeacherDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Emerald400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Teacher & Issue Passkey", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "The teacher will use this unique passkey to login into their portal.",
+                        fontSize = 11.sp,
+                        color = Emerald400
+                    )
+
+                    OutlinedTextField(
+                        value = teacherName,
+                        onValueChange = { teacherName = it },
+                        label = { Text("Teacher Full Name *") },
+                        placeholder = { Text("e.g. Mr. Kolawole Adeyemi") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = teacherSubject,
+                        onValueChange = { teacherSubject = it },
+                        label = { Text("Subject Specialization") },
+                        placeholder = { Text("e.g. Chemistry & Biology") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = teacherClass,
+                        onValueChange = { teacherClass = it },
+                        label = { Text("Assigned Class") },
+                        placeholder = { Text("e.g. SS 2 Commercial") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = teacherPhone,
+                        onValueChange = { teacherPhone = it },
+                        label = { Text("Phone Number") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = teacherEmail,
+                        onValueChange = { teacherEmail = it },
+                        label = { Text("Email (Optional)") },
+                        placeholder = { Text("teacher@grazielroyalschools.edu.ng") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // Passkey field with Generator
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = teacherPasskey,
+                            onValueChange = { teacherPasskey = it },
+                            label = { Text("Unique Passkey *") },
+                            colors = customFieldColors(),
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        IconButton(
+                            onClick = {
+                                val prefix = if (teacherName.isNotBlank()) teacherName.take(3).uppercase() else "TCH"
+                                teacherPasskey = "$prefix-${(1000..9999).random()}-2025"
+                            },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Regenerate Passkey", tint = Emerald400)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (teacherName.isNotBlank() && teacherPasskey.isNotBlank()) {
+                            viewModel.addNewTeacher(
+                                fullName = teacherName,
+                                email = teacherEmail,
+                                phone = teacherPhone,
+                                assignedClass = teacherClass,
+                                subject = teacherSubject,
+                                passkey = teacherPasskey
+                            ) { success, msg ->
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                if (success) {
+                                    showAddTeacherDialog = false
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, "Teacher Name and Passkey are required.", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Emerald500)
+                ) {
+                    Text("Add & Issue Key", fontWeight = FontWeight.Bold, color = DarkCanvas)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showAddTeacherDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: EDIT TEACHER PASSKEY
+    // =========================================================================
+    showEditPasskeyDialogForTeacher?.let { teacher ->
+        var newPasskey by remember { mutableStateOf(teacher.passkey) }
+
+        AlertDialog(
+            onDismissRequest = { showEditPasskeyDialogForTeacher = null },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Text("Edit Passkey for ${teacher.fullName}", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 15.sp)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Update the secret passkey for this teacher.", fontSize = 12.sp, color = Slate400)
+                    OutlinedTextField(
+                        value = newPasskey,
+                        onValueChange = { newPasskey = it },
+                        label = { Text("Teacher Passkey") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newPasskey.isNotBlank()) {
+                            viewModel.updateTeacherPasskey(teacher.id, newPasskey)
+                            Toast.makeText(context, "Passkey updated to: $newPasskey", Toast.LENGTH_SHORT).show()
+                            showEditPasskeyDialogForTeacher = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
+                ) {
+                    Text("Save Passkey", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showEditPasskeyDialogForTeacher = null }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: ENROLL STUDENT & ASSIGN OFFICIAL STUDENT ID
+    // =========================================================================
+    if (showAddStudentDialog) {
+        var studentName by remember { mutableStateOf("") }
+        var studentId by remember { mutableStateOf("GRS/2025/${(1000..9999).random()}") }
+        var studentClass by remember { mutableStateOf("SS 1 Science") }
+        var parentName by remember { mutableStateOf("") }
+        var parentPhone by remember { mutableStateOf("+234 816 620 5113") }
+        var parentEmail by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddStudentDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.School, contentDescription = null, tint = Indigo400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Enroll Student to Registry", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Both the student and parent will use this Student ID to enter their portals.",
+                        fontSize = 11.sp,
+                        color = Indigo400
+                    )
+
+                    OutlinedTextField(
+                        value = studentName,
+                        onValueChange = { studentName = it },
+                        label = { Text("Student Full Name *") },
+                        placeholder = { Text("e.g. Adeleke David Oluwaseun") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = studentId,
+                        onValueChange = { studentId = it },
+                        label = { Text("Official Student ID *") },
+                        placeholder = { Text("GRS/2025/0428") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = studentClass,
+                        onValueChange = { studentClass = it },
+                        label = { Text("Class") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = parentName,
+                        onValueChange = { parentName = it },
+                        label = { Text("Parent / Guardian Name") },
+                        placeholder = { Text("Mr. & Mrs. Adeleke") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = parentPhone,
+                        onValueChange = { parentPhone = it },
+                        label = { Text("Parent Phone") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (studentName.isNotBlank() && studentId.isNotBlank()) {
+                            viewModel.addNewStudent(
+                                fullName = studentName,
+                                studentId = studentId,
+                                assignedClass = studentClass,
+                                parentName = parentName,
+                                parentPhone = parentPhone,
+                                parentEmail = parentEmail
+                            ) { success, msg ->
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                if (success) {
+                                    showAddStudentDialog = false
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, "Student Name and Student ID are required.", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
+                ) {
+                    Text("Enroll Student", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showAddStudentDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: CHANGE MASTER ADMIN PASSKEY
+    // =========================================================================
+    if (showChangeAdminPasskeyDialog) {
+        var newAdminKey by remember { mutableStateOf(adminSecurityConfig?.adminPasskey ?: "GRS-ADMIN-2025") }
+
+        AlertDialog(
+            onDismissRequest = { showChangeAdminPasskeyDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Security, contentDescription = null, tint = Rose400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Change Super Admin Passkey", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Enter a new secure Master Passkey for the School Proprietor / Super Admin.",
+                        fontSize = 12.sp,
+                        color = Slate400
+                    )
+                    OutlinedTextField(
+                        value = newAdminKey,
+                        onValueChange = { newAdminKey = it },
+                        label = { Text("New Admin Passkey") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newAdminKey.length >= 4) {
+                            viewModel.updateAdminSecurityPasskey(newAdminKey) { success ->
+                                if (success) {
+                                    Toast.makeText(context, "Admin Passkey updated successfully!", Toast.LENGTH_SHORT).show()
+                                    showChangeAdminPasskeyDialog = false
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, "Passkey must be at least 4 characters long.", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+                ) {
+                    Text("Update Passkey", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showChangeAdminPasskeyDialog = false }) {
                     Text("Cancel", color = Slate300)
                 }
             }
