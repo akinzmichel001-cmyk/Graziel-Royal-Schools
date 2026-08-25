@@ -24,12 +24,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
@@ -38,11 +41,14 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Publish
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -135,6 +141,8 @@ fun AdminDashboardScreen(
     var showAddStudentDialog by remember { mutableStateOf(false) }
     var showEditPasskeyDialogForTeacher by remember { mutableStateOf<TeacherAccount?>(null) }
     var showChangeAdminPasskeyDialog by remember { mutableStateOf(false) }
+    var showUpdateAcademicDialog by remember { mutableStateOf(false) }
+    var showUpdateBankDialog by remember { mutableStateOf(false) }
 
     fun copyToClipboard(label: String, text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -248,6 +256,233 @@ fun AdminDashboardScreen(
                         StatPill("Enrolled Students", "${studentRecords.size}", Indigo400)
                         StatPill("Fee Bills", "${feeItems.size}", Amber400)
                         StatPill("Approval", if (isReportApproved) "Ready" else "Pending", if (isReportApproved) Emerald400 else Rose400)
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // SECTION: ACADEMIC CALENDAR & ACTIVE SESSION CONTROLS
+        // =========================================================================
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Amber500.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Amber500.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.DateRange,
+                                        contentDescription = null,
+                                        tint = Amber400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Academic Term & Session",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Controls school-wide term exams & billing period",
+                                    fontSize = 11.sp,
+                                    color = Amber400
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { showUpdateAcademicDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Amber500),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("admin_change_term_session_button")
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = DarkCanvas, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Change Term/Year", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DarkCanvas)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Slate900, RoundedCornerShape(10.dp))
+                            .border(BorderStroke(1.dp, DarkBorderSubtle), RoundedCornerShape(10.dp))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Active Academic Term:", fontSize = 11.sp, color = Slate400)
+                            Text(
+                                text = adminSecurityConfig?.activeTerm ?: "2nd Term",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Amber400
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Slate800,
+                            border = BorderStroke(1.dp, DarkBorder)
+                        ) {
+                            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                Text("Session Year:", fontSize = 10.sp, color = Slate400)
+                                Text(
+                                    text = adminSecurityConfig?.activeSession ?: "2024/2025",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // SECTION: SCHOOL PAYMENT BANK ACCOUNT & NOTIFICATION BOX
+        // =========================================================================
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Indigo500.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Indigo500.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalance,
+                                        contentDescription = null,
+                                        tint = Indigo400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "School Payment Account",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Parent fees & direct deposit account",
+                                    fontSize = 11.sp,
+                                    color = Indigo400
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { showUpdateBankDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("admin_edit_bank_details_button")
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = Slate100, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edit Account", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Slate900,
+                        border = BorderStroke(1.dp, DarkBorderSubtle),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Bank: ${adminSecurityConfig?.bankName ?: "Monie Point"}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                                    Text("Name: ${adminSecurityConfig?.bankAccountName ?: "Graziel Royal Schools Ltd."}", fontSize = 11.sp, color = Slate300)
+                                    Text("Acc Number: ${adminSecurityConfig?.bankAccountNumber ?: "5255883539"}", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Amber400)
+                                }
+
+                                IconButton(
+                                    onClick = { copyToClipboard("Account Number", adminSecurityConfig?.bankAccountNumber ?: "5255883539") },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy Account Number", tint = Amber400, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Notifications Box Launcher Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.openNotificationBox() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Slate800),
+                            border = BorderStroke(1.dp, Amber400.copy(alpha = 0.4f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("admin_open_notification_box_button")
+                        ) {
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Amber400, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Check Notification Box", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                        }
+
+                        Button(
+                            onClick = { showBroadcastDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Rose500),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("admin_send_broadcast_button")
+                        ) {
+                            Icon(Icons.Default.Campaign, contentDescription = null, tint = Slate100, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Dispatch Alert", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                        }
                     }
                 }
             }
@@ -1532,6 +1767,215 @@ fun AdminDashboardScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showChangeAdminPasskeyDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: UPDATE ACADEMIC TERM & SESSION YEAR
+    // =========================================================================
+    if (showUpdateAcademicDialog) {
+        var selectedTermOption by remember { mutableStateOf(adminSecurityConfig?.activeTerm ?: "2nd Term") }
+        var sessionYearText by remember { mutableStateOf(adminSecurityConfig?.activeSession ?: "2024/2025") }
+
+        AlertDialog(
+            onDismissRequest = { showUpdateAcademicDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DateRange, contentDescription = null, tint = Amber400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Update Term & Session Year", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Change the active academic term and calendar session year across all teacher reports, student portal, and billing modules.",
+                        fontSize = 11.sp,
+                        color = Slate400
+                    )
+
+                    Text("Select Academic Term:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate300)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("1st Term", "2nd Term", "3rd Term").forEach { term ->
+                            val isSelected = selectedTermOption == term
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) Amber500 else Slate900,
+                                border = BorderStroke(1.dp, if (isSelected) Amber400 else DarkBorder),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedTermOption = term }
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.padding(vertical = 10.dp)
+                                ) {
+                                    Text(
+                                        text = term,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) DarkCanvas else Slate300
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = sessionYearText,
+                        onValueChange = { sessionYearText = it },
+                        label = { Text("Academic Session Year") },
+                        placeholder = { Text("e.g., 2024/2025, 2025/2026") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("2024/2025", "2025/2026", "2026/2027").forEach { quickSession ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Slate900,
+                                border = BorderStroke(1.dp, DarkBorderSubtle),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { sessionYearText = quickSession }
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.padding(vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = quickSession,
+                                        fontSize = 10.sp,
+                                        color = if (sessionYearText == quickSession) Amber400 else Slate400,
+                                        fontWeight = if (sessionYearText == quickSession) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (selectedTermOption.isNotBlank() && sessionYearText.isNotBlank()) {
+                            viewModel.updateAcademicSessionAndTerm(selectedTermOption, sessionYearText) { success ->
+                                if (success) {
+                                    Toast.makeText(context, "Academic Calendar updated to $selectedTermOption $sessionYearText", Toast.LENGTH_LONG).show()
+                                    showUpdateAcademicDialog = false
+                                } else {
+                                    Toast.makeText(context, "Failed to update academic term.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Amber500)
+                ) {
+                    Text("Save Changes", fontWeight = FontWeight.Bold, color = DarkCanvas)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showUpdateAcademicDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: UPDATE SCHOOL PAYMENT BANK ACCOUNT
+    // =========================================================================
+    if (showUpdateBankDialog) {
+        var bankNameInput by remember { mutableStateOf(adminSecurityConfig?.bankName ?: "Monie Point") }
+        var bankAccountNumInput by remember { mutableStateOf(adminSecurityConfig?.bankAccountNumber ?: "5255883539") }
+        var bankAccountNameInput by remember { mutableStateOf(adminSecurityConfig?.bankAccountName ?: "Graziel Royal Schools Ltd.") }
+
+        AlertDialog(
+            onDismissRequest = { showUpdateBankDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Indigo400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Update School Bank Account", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Update the official account information presented to parents for school fee payments and bank transfers.",
+                        fontSize = 11.sp,
+                        color = Slate400
+                    )
+
+                    OutlinedTextField(
+                        value = bankNameInput,
+                        onValueChange = { bankNameInput = it },
+                        label = { Text("Bank Name") },
+                        placeholder = { Text("Monie Point / Moniepoint MFB") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = bankAccountNumInput,
+                        onValueChange = { bankAccountNumInput = it },
+                        label = { Text("Account Number") },
+                        placeholder = { Text("5255883539") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = bankAccountNameInput,
+                        onValueChange = { bankAccountNameInput = it },
+                        label = { Text("Account Name") },
+                        placeholder = { Text("Graziel Royal Schools Ltd.") },
+                        colors = customFieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (bankNameInput.isNotBlank() && bankAccountNumInput.isNotBlank() && bankAccountNameInput.isNotBlank()) {
+                            viewModel.updateSchoolBankDetails(
+                                bankName = bankNameInput,
+                                accountNumber = bankAccountNumInput,
+                                accountName = bankAccountNameInput
+                            ) { success ->
+                                if (success) {
+                                    Toast.makeText(context, "School Bank Account details updated successfully!", Toast.LENGTH_SHORT).show()
+                                    showUpdateBankDialog = false
+                                } else {
+                                    Toast.makeText(context, "Failed to update bank details.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, "Please fill in all bank details", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
+                ) {
+                    Text("Save Bank Info", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showUpdateBankDialog = false }) {
                     Text("Cancel", color = Slate300)
                 }
             }

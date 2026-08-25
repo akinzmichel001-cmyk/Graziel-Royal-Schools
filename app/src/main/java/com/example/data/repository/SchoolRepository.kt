@@ -802,7 +802,12 @@ class SchoolRepository(private val dao: SchoolDao) {
             adminPasskey = "GRS-ADMIN-2025",
             adminName = "Mr. Tobi Adebayo",
             adminEmail = "admin@grazielroyalschools.edu.ng",
-            adminPhone = "+234 816 620 5113"
+            adminPhone = "+234 816 620 5113",
+            activeTerm = "2nd Term",
+            activeSession = "2024/2025",
+            bankName = "Monie Point",
+            bankAccountNumber = "5255883539",
+            bankAccountName = "Graziel Royal Schools Ltd."
         )
 
         dao.insertAnnouncements(initialAnnouncements)
@@ -888,9 +893,17 @@ class SchoolRepository(private val dao: SchoolDao) {
         dao.deleteStudentRecord(studentId)
     }
 
-    // Admin Security Passkey Configuration
+    // Admin Security Passkey & Academic Configuration
     suspend fun updateAdminPasskey(newPasskey: String) {
         dao.updateAdminPasskey(newPasskey.trim())
+    }
+
+    suspend fun updateAcademicTermAndSession(term: String, session: String) {
+        dao.updateAcademicTermAndSession(term.trim(), session.trim())
+    }
+
+    suspend fun updateBankDetails(bankName: String, accountNumber: String, accountName: String) {
+        dao.updateBankDetails(bankName.trim(), accountNumber.trim(), accountName.trim())
     }
 
     suspend fun getAdminSecurityConfigOnce(): AdminSecurityConfig? {

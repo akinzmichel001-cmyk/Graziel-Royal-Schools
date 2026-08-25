@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,7 +22,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Forum
@@ -47,9 +50,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,6 +92,7 @@ fun ParentPortalScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val feeItems by viewModel.feeItems.collectAsStateWithLifecycle()
     val payments by viewModel.payments.collectAsStateWithLifecycle()
@@ -299,6 +306,52 @@ fun ParentPortalScreen(
                                     Text("Pay Now", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DarkCanvas)
                                 }
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Direct School Bank Account info for transfers
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Amber500.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, Amber500.copy(alpha = 0.35f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Amber400, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Monie Point School Account", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Amber400)
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Slate900,
+                                    border = BorderStroke(1.dp, Amber400.copy(alpha = 0.3f)),
+                                    modifier = Modifier.clickable {
+                                        clipboardManager.setText(AnnotatedString("5255883539"))
+                                        Toast.makeText(context, "Account Number 5255883539 copied!", Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Amber400, modifier = Modifier.size(10.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Copy 5255883539", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Amber400)
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Name: Graziel Royal Schools Ltd. • Bank: Monie Point", fontSize = 11.sp, color = Slate300)
+                            Text("Account No: 5255883539 (Moniepoint MFB)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate100, fontFamily = FontFamily.Monospace)
                         }
                     }
 

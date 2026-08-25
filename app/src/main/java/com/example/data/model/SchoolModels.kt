@@ -59,7 +59,12 @@ data class AdminSecurityConfig(
     val adminPasskey: String = "GRS-ADMIN-2025",
     val adminName: String = "Mr. Tobi Adebayo",
     val adminEmail: String = "admin@grazielroyalschools.edu.ng",
-    val adminPhone: String = "+234 816 620 5113"
+    val adminPhone: String = "+234 816 620 5113",
+    val activeTerm: String = "2nd Term",
+    val activeSession: String = "2024/2025",
+    val bankName: String = "Monie Point",
+    val bankAccountNumber: String = "5255883539",
+    val bankAccountName: String = "Graziel Royal Schools Ltd."
 )
 
 @Entity(tableName = "staff_clock_records")
@@ -266,5 +271,17 @@ data class ChatMessage(
     val id: String = System.currentTimeMillis().toString(),
     val text: String,
     val isUser: Boolean,
-    val timestamp: String = "Just now"
+    val timestamp: String = "Just now",
+    val modeBadge: String? = null
+)
+
+data class AiTutorSpecification(
+    val userRole: String = "Student",
+    val gradeLevel: String = "SS 1 - SS 3 (Senior Secondary)",
+    val subject: String = "Mathematics & Sciences",
+    val customSubjectName: String = "",
+    val teachingStyle: String = "Step-by-Step Patient Mentor",
+    val languageComplexity: String = "Standard & Engaging",
+    val customInstruction: String = "",
+    val aiTutorName: String = "Graziel Royal AI Tutor"
 )

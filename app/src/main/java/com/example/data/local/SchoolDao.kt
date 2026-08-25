@@ -83,6 +83,12 @@ interface SchoolDao {
     @Query("UPDATE admin_security SET adminPasskey = :passkey WHERE id = 1")
     suspend fun updateAdminPasskey(passkey: String)
 
+    @Query("UPDATE admin_security SET activeTerm = :term, activeSession = :session WHERE id = 1")
+    suspend fun updateAcademicTermAndSession(term: String, session: String)
+
+    @Query("UPDATE admin_security SET bankName = :bankName, bankAccountNumber = :accountNumber, bankAccountName = :accountName WHERE id = 1")
+    suspend fun updateBankDetails(bankName: String, accountNumber: String, accountName: String)
+
     // Announcements
     @Query("SELECT * FROM announcements ORDER BY isPinned DESC, id DESC")
     fun getAllAnnouncements(): Flow<List<Announcement>>

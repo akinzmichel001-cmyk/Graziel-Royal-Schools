@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.SchoolDatabase
 import com.example.data.model.AdminSecurityConfig
 import com.example.data.model.AdmissionApplication
+import com.example.data.model.AiTutorSpecification
 import com.example.data.model.Announcement
 import com.example.data.model.Assignment
 import com.example.data.model.AttendanceRecord
@@ -27,6 +28,7 @@ import com.example.data.model.TimetablePeriod
 import com.example.data.model.UserAccount
 import com.example.data.model.UserRole
 import com.example.data.repository.SchoolRepository
+import com.example.data.service.AiTutorService
 import com.example.data.auth.AuthResult
 import com.example.data.auth.FirebaseAuthRepository
 import com.google.firebase.auth.FirebaseUser
@@ -134,10 +136,27 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     private val _admissionSubmissionSuccess = MutableStateFlow(false)
     val admissionSubmissionSuccess: StateFlow<Boolean> = _admissionSubmissionSuccess.asStateFlow()
 
+    private val _showNotificationBox = MutableStateFlow(false)
+    val showNotificationBox: StateFlow<Boolean> = _showNotificationBox.asStateFlow()
+
+    private val aiTutorService = AiTutorService()
+
+    private val _aiTutorSpecification = MutableStateFlow(
+        AiTutorSpecification(
+            userRole = "Student",
+            gradeLevel = "SS 1 - SS 3 (Senior Secondary)",
+            subject = "Mathematics & Sciences",
+            teachingStyle = "Step-by-Step Patient Mentor",
+            languageComplexity = "Standard & Engaging",
+            aiTutorName = "Graziel Royal AI Tutor"
+        )
+    )
+    val aiTutorSpecification: StateFlow<AiTutorSpecification> = _aiTutorSpecification.asStateFlow()
+
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(
         listOf(
             ChatMessage(
-                text = "Welcome to Graziel Royal AI Assistant & Academic Tutor! 🎓\n\nI can help you with:\n• Homework problem-solving & study explanations\n• CBT preparation & past questions\n• School calendar, cultural day & events\n• Admissions & fee structures\n\nHow may I assist you today?",
+                text = "Welcome to Graziel Royal AI Academic & Personalized Tutor! 🎓\n\nI am configured to serve you based on your exact custom specifications:\n• Role: Student • Level: SS 1-3 • Subject: Mathematics & Sciences • Style: Step-by-Step Mentor\n\nTap **'Customize Tutor'** above to adjust your grade level, role (Teacher, Student, Parent, Admin), subject, or teaching style at any time! What would you like to study or generate today?",
                 isUser = false
             )
         )
@@ -245,6 +264,42 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     fun loginAs(account: UserAccount) {
         _currentUser.value = account
         _currentRole.value = account.role
+
+        // Adapt default AI Tutor specification to user role & context
+        val currentSpec = _aiTutorSpecification.value
+        val updatedSpec = when (account.role) {
+            UserRole.ADMIN -> currentSpec.copy(
+                userRole = "Administrator",
+                gradeLevel = "All Levels & Faculty",
+                teachingStyle = "Administrative Memo & Policy Specialist"
+            )
+            UserRole.TEACHER -> currentSpec.copy(
+                userRole = "Teacher",
+                gradeLevel = if (account.assignedClass.isNotBlank()) account.assignedClass else "SS 1 - SS 3",
+                subject = if (account.titleOrDesignation.isNotBlank()) account.titleOrDesignation else "Senior Mathematics & Physics",
+                teachingStyle = "Lesson Planner & Scheme Builder"
+            )
+            UserRole.STUDENT -> currentSpec.copy(
+                userRole = "Student",
+                gradeLevel = if (account.assignedClass.isNotBlank()) account.assignedClass else "SS 1 Science",
+                subject = "Mathematics & Sciences",
+                teachingStyle = "Step-by-Step Patient Mentor"
+            )
+            UserRole.PARENT -> currentSpec.copy(
+                userRole = "Parent",
+                gradeLevel = "Child Level (${account.assignedClass})",
+                subject = "Academic Progress & Guidance",
+                teachingStyle = "Parenting & Academic Advisor"
+            )
+            UserRole.GUEST_PROSPECTIVE -> currentSpec.copy(
+                userRole = "General Scholar / Prospective",
+                gradeLevel = "Prospective Student / General",
+                subject = "Admissions & School Information",
+                teachingStyle = "Clear & Engaging (Standard)"
+            )
+        }
+        _aiTutorSpecification.value = updatedSpec
+
         when (account.role) {
             UserRole.ADMIN -> _currentDestination.value = AppDestination.ADMIN_DASHBOARD
             UserRole.TEACHER -> _currentDestination.value = AppDestination.TEACHER_PORTAL
@@ -538,6 +593,64 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
             }
         } else {
             onComplete(false)
+        }
+    }
+
+    fun updateAcademicSessionAndTerm(term: String, session: String, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.updateAcademicTermAndSession(term.trim(), session.trim())
+                _selectedTerm.value = term.trim()
+                onComplete(true)
+            } catch (e: Exception) {
+                onComplete(false)
+            }
+        }
+    }
+
+    fun updateSchoolBankDetails(bankName: String, accountNumber: String, accountName: String, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.updateBankDetails(bankName.trim(), accountNumber.trim(), accountName.trim())
+                onComplete(true)
+            } catch (e: Exception) {
+                onComplete(false)
+            }
+        }
+    }
+
+    fun openNotificationBox() {
+        _showNotificationBox.value = true
+    }
+
+    fun closeNotificationBox() {
+        _showNotificationBox.value = false
+    }
+
+    fun postOfficialBroadcast(
+        title: String,
+        summary: String,
+        category: String = "Notice",
+        targetAudience: String = "All",
+        isPinned: Boolean = true,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val newAnnouncement = Announcement(
+                    title = title.trim(),
+                    summary = summary.trim(),
+                    category = category,
+                    date = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.US).format(java.util.Date()),
+                    targetAudience = targetAudience,
+                    isPinned = isPinned,
+                    author = _currentUser.value?.fullName ?: "Super Admin (Mr. Tobi Adebayo)"
+                )
+                repository.addAnnouncement(newAnnouncement)
+                onComplete(true)
+            } catch (e: Exception) {
+                onComplete(false)
+            }
         }
     }
 
@@ -1196,55 +1309,64 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
         publishAnnouncement(title, category, summary, targetAudience)
     }
 
-    fun sendAiPrompt(userText: String) {
+    fun updateAiSpecification(newSpec: AiTutorSpecification) {
+        _aiTutorSpecification.value = newSpec
+        Toast.makeText(getApplication(), "AI Tutor tailored to ${newSpec.userRole} (${newSpec.gradeLevel})", Toast.LENGTH_SHORT).show()
+    }
+
+    fun clearAiChat() {
+        _chatMessages.value = listOf(
+            ChatMessage(
+                text = "Chat history cleared. I am ready with your active configuration (${_aiTutorSpecification.value.userRole} • ${_aiTutorSpecification.value.gradeLevel} • ${_aiTutorSpecification.value.subject}). How can I assist you?",
+                isUser = false
+            )
+        )
+    }
+
+    fun sendAiPrompt(userText: String, modeBadge: String? = null) {
         if (userText.isBlank()) return
 
         val userMessage = ChatMessage(
             text = userText,
             isUser = true,
-            timestamp = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
+            timestamp = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date()),
+            modeBadge = modeBadge
         )
         _chatMessages.value = _chatMessages.value + userMessage
         _isAiGenerating.value = true
 
         viewModelScope.launch {
-            kotlinx.coroutines.delay(800)
-            val replyText = generateAiSchoolResponse(userText)
-            val aiMessage = ChatMessage(
-                text = replyText,
-                isUser = false,
-                timestamp = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
-            )
-            _chatMessages.value = _chatMessages.value + aiMessage
-            _isAiGenerating.value = false
+            try {
+                val currentSpec = _aiTutorSpecification.value
+                val history = _chatMessages.value.map { Pair(it.text, it.isUser) }
+                val replyText = aiTutorService.generateTutorResponse(
+                    userMessage = userText,
+                    specification = currentSpec,
+                    chatHistory = history
+                )
+                val aiMessage = ChatMessage(
+                    text = replyText,
+                    isUser = false,
+                    timestamp = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date()),
+                    modeBadge = currentSpec.userRole
+                )
+                _chatMessages.value = _chatMessages.value + aiMessage
+            } catch (e: Exception) {
+                val fallbackReply = aiTutorService.generateCustomizedOfflineResponse(userText, _aiTutorSpecification.value)
+                val aiMessage = ChatMessage(
+                    text = fallbackReply,
+                    isUser = false,
+                    timestamp = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date()),
+                    modeBadge = "Offline Engine"
+                )
+                _chatMessages.value = _chatMessages.value + aiMessage
+            } finally {
+                _isAiGenerating.value = false
+            }
         }
     }
 
     fun sendAiMessage(userText: String) {
         sendAiPrompt(userText)
-    }
-
-    private fun generateAiSchoolResponse(query: String): String {
-        val q = query.lowercase()
-        return when {
-            q.contains("cbt") || q.contains("exam") || q.contains("test") -> {
-                "📝 **Graziel Royal CBT System**:\n\n• Teachers create subject test questions and toggle **'Go Live'**.\n• When live, tests appear instantly on student portals with countdown timers.\n• Teachers review submitted scores and click **'Publish Results'** to release grades to students and parents!\n• You can take or review CBTs in the **CBT Center** tab."
-            }
-            q.contains("yoruba") || q.contains("ofuloju") || q.contains("culinary") || q.contains("culture") -> {
-                "🌟 **Graziel Royal Yoruba Cultural Project**:\n\nIn our esteemed cultural curriculum, students explore traditional Yoruba culinary heritage—focusing on **Ofuloju** and traditional pounded yam (Iyan).\n\nThis project blends history, social customs, and practical culinary science to instill cultural pride and teamwork!"
-            }
-            q.contains("fee") || q.contains("pay") || q.contains("cost") || q.contains("tuition") -> {
-                "💳 **Graziel Royal Schools Fee Structure**:\n\n• **Tuition**: ₦220,000 / term\n• **ICT, Coding & Robotics**: ₦45,000 / term\n• **School Transit (Ifo & Opo-Ibogun corridor)**: ₦65,000 / term\n• **Lunch Club**: ₦55,000 / term\n\nBills are visible on the **Parent Portal** with instant online receipts."
-            }
-            q.contains("admission") || q.contains("apply") -> {
-                "📋 **Admissions at Graziel Royal Schools**:\n\nWe accept students into Early Years, Primary (Grades 1-6), and College (JSS 1 - SS 3). Apply directly in the **Admissions tab** or visit our campus at Opo-Ibogun, Ifo, Ogun State, Nigeria (Founder: Mr. Tobi Adebayo, Admin: +234 816 620 5113)."
-            }
-            q.contains("math") || q.contains("algebra") || q.contains("equation") -> {
-                "📐 **Royal Math Problem Solver**:\n\nFor quadratic equations like x² - 5x + 6 = 0:\n1. Factor into (x - 2)(x - 3) = 0\n2. Solutions are **x = 2** or **x = 3**.\n\nNeed help with any question in the CBT bank? Just paste it here!"
-            }
-            else -> {
-                "👑 **Graziel Royal Academic Assistant**:\n\nWelcome! I can assist you with your CBT tests, subject assignments, timetables, and school announcements. What would you like to study today?"
-            }
-        }
     }
 }

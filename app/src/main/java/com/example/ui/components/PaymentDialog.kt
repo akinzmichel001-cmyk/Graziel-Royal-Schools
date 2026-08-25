@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -29,6 +31,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
@@ -43,14 +46,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.R
 import com.example.data.model.FeeItem
+import com.example.ui.theme.Amber400
+import com.example.ui.theme.Amber500
 import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkBorderSubtle
 import com.example.ui.theme.DarkCardSurface
@@ -75,9 +84,11 @@ fun PaymentDialog(
     onDismiss: () -> Unit,
     onConfirmPayment: (FeeItem, String) -> Unit
 ) {
-    var selectedMethod by remember { mutableStateOf("Debit / Credit Card") }
+    var selectedMethod by remember { mutableStateOf("Direct Bank Transfer") }
     var isProcessing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
 
     val formattedAmount = "₦" + NumberFormat.getNumberInstance(Locale.US).format(feeItem.amount)
 
@@ -164,7 +175,58 @@ fun PaymentDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Official School Bank Details for Direct Payment
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Amber500.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, Amber500.copy(alpha = 0.35f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Amber400, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("OFFICIAL SCHOOL ACCOUNT", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Amber400)
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Slate900,
+                                border = BorderStroke(1.dp, Amber400.copy(alpha = 0.3f)),
+                                modifier = Modifier.clickable {
+                                    clipboardManager.setText(AnnotatedString("5255883539"))
+                                    Toast.makeText(context, "Account Number 5255883539 copied!", Toast.LENGTH_SHORT).show()
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Amber400, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Copy", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Amber400)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Bank: Monie Point (Moniepoint MFB)", fontSize = 12.sp, color = Slate200)
+                        Text("Account Name: Graziel Royal Schools Ltd.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Slate100)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Account Number: ", fontSize = 12.sp, color = Slate400)
+                            Text("5255883539", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Amber400, fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = "Select Payment Channel:",
@@ -173,21 +235,21 @@ fun PaymentDialog(
                     color = Slate100
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Payment channels
+                PaymentOptionRow(
+                    title = "Direct Bank Transfer (Monie Point / NIP)",
+                    icon = Icons.Default.AccountBalance,
+                    selected = selectedMethod == "Direct Bank Transfer",
+                    onClick = { selectedMethod = "Direct Bank Transfer" }
+                )
+
                 PaymentOptionRow(
                     title = "Debit / Credit Card (Mastercard, Visa, Verve)",
                     icon = Icons.Default.CreditCard,
                     selected = selectedMethod == "Debit / Credit Card",
                     onClick = { selectedMethod = "Debit / Credit Card" }
-                )
-
-                PaymentOptionRow(
-                    title = "Direct Bank Transfer (Instant NIP)",
-                    icon = Icons.Default.AccountBalance,
-                    selected = selectedMethod == "Direct Bank Transfer",
-                    onClick = { selectedMethod = "Direct Bank Transfer" }
                 )
 
                 PaymentOptionRow(
@@ -197,7 +259,7 @@ fun PaymentDialog(
                     onClick = { selectedMethod = "USSD / Mobile Banking" }
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -207,13 +269,13 @@ fun PaymentDialog(
                     Icon(Icons.Default.Lock, contentDescription = null, tint = Emerald400, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "256-Bit SSL Encrypted School Payment Gateway",
+                        text = "256-Bit SSL Encrypted Bursary Gateway",
                         fontSize = 10.sp,
                         color = Slate400
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Button(
                     onClick = {
@@ -237,7 +299,7 @@ fun PaymentDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Processing Transaction...", fontSize = 13.sp, color = Color.White)
                     } else {
-                        Text("Authorize & Pay $formattedAmount", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Confirm & Verify $formattedAmount", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }

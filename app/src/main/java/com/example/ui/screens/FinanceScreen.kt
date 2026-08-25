@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
@@ -45,7 +47,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -449,34 +454,65 @@ private fun PaymentTransactionCard(
 
 @Composable
 private fun BursaryAccountCard() {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Slate900),
-        border = BorderStroke(1.dp, DarkBorder)
+        border = BorderStroke(1.dp, Amber500.copy(alpha = 0.35f))
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Indigo400, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "OFFLINE DIRECT BANK DEPOSIT DETAILS",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Indigo400,
-                    letterSpacing = 0.5.sp
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccountBalance, contentDescription = null, tint = Amber400, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "OFFICIAL SCHOOL PAYMENT ACCOUNT",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Amber400,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Amber500.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, Amber400.copy(alpha = 0.3f)),
+                    modifier = Modifier.clickable {
+                        clipboardManager.setText(AnnotatedString("5255883539"))
+                        Toast.makeText(context, "Account Number 5255883539 copied!", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Amber400, modifier = Modifier.size(12.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Copy Account No", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Amber400)
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Text("Bank: Guaranty Trust Bank (GTBank) / Zenith Bank", fontSize = 12.sp, color = Slate200)
-            Text("Account Name: Graziel Royal International School", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Slate100)
-            Text("Account Number: 0123456789 (NGN Operations)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Amber400, fontFamily = FontFamily.Monospace)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Note: Use Student ID (e.g. GRS/2024/0428) as the payment reference or narration for automatic reconciliation.", fontSize = 10.sp, color = Slate400)
+            Text("Bank Name: Monie Point (Moniepoint MFB)", fontSize = 12.sp, color = Slate200)
+            Text("Account Name: Graziel Royal Schools Ltd.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Slate100)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Account Number: ", fontSize = 12.sp, color = Slate400)
+                Text("5255883539", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Amber400, fontFamily = FontFamily.Monospace)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("Note: Use your Student ID (e.g. GRS/2024/0428) or Student Full Name as the payment narration/reference for automated instant receipt generation.", fontSize = 10.sp, color = Slate400)
         }
     }
 }
