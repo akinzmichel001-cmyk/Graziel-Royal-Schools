@@ -102,10 +102,10 @@ fun ReportCardSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = R.drawable.img_school_logo),
-                            contentDescription = "Logo",
-                            modifier = Modifier.size(34.dp)
+                        SchoolLogoBadge(
+                            size = 34.dp,
+                            shapeRadius = 8.dp,
+                            borderAlpha = 0.3f
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(

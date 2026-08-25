@@ -103,10 +103,10 @@ fun PaymentDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = R.drawable.img_school_logo),
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp)
+                        SchoolLogoBadge(
+                            size = 28.dp,
+                            shapeRadius = 8.dp,
+                            borderAlpha = 0.3f
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(

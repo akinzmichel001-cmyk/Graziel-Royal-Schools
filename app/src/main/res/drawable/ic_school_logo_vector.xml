@@ -1,0 +1,85 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Outer Circular Shield Background -->
+    <path
+        android:pathData="M48,6 A42,42 0 1,1 47.9,6 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="48"
+                android:startY="6"
+                android:endX="48"
+                android:endY="90"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#1E3A8A" />
+                <item android:offset="0.5" android:color="#172554" />
+                <item android:offset="1.0" android:color="#0F172A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Outer Gold Ring -->
+    <path
+        android:pathData="M48,8 A40,40 0 1,1 47.9,8 Z"
+        android:strokeWidth="2.5"
+        android:strokeColor="#F59E0B" />
+
+    <!-- Inner Shield Silhouette -->
+    <path
+        android:pathData="M48,16 L68,23 C68,43 59,59 48,66 C37,59 28,43 28,23 Z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FBBF24" />
+
+    <!-- Royal Crown -->
+    <path
+        android:pathData="M38,28 L41,34 L48,29 L55,34 L58,28 L59,36 L37,36 Z"
+        android:fillColor="#F59E0B" />
+
+    <!-- Open Book Left Page -->
+    <path
+        android:pathData="M47,40 C42,39 36,40 33,42 L33,52 C36,50 42,49 47,50 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Open Book Right Page -->
+    <path
+        android:pathData="M49,40 C54,39 60,40 63,42 L63,52 C60,50 54,49 49,50 Z"
+        android:fillColor="#F1F5F9" />
+
+    <!-- Book Spine -->
+    <path
+        android:pathData="M48,40 L48,51"
+        android:strokeWidth="1.2"
+        android:strokeColor="#F59E0B" />
+
+    <!-- Book text lines (Left) -->
+    <path
+        android:pathData="M36,44 L44,43 M36,47 L44,46 M36,49 L43,49"
+        android:strokeWidth="0.7"
+        android:strokeColor="#94A3B8" />
+
+    <!-- Book text lines (Right) -->
+    <path
+        android:pathData="M52,43 L60,44 M52,46 L60,47 M52,49 L59,49"
+        android:strokeWidth="0.7"
+        android:strokeColor="#94A3B8" />
+
+    <!-- Golden Star -->
+    <path
+        android:pathData="M48,55 L49.5,58.5 L53,59 L50.5,61.5 L51,65 L48,63 L45,65 L45.5,61.5 L43,59 L46.5,58.5 Z"
+        android:fillColor="#FBBF24" />
+
+    <!-- Motto Banner Ribbon -->
+    <path
+        android:pathData="M22,72 L28,68 L68,68 L74,72 L68,76 L28,76 Z"
+        android:fillColor="#F59E0B" />
+
+    <!-- Banner Edge Folds -->
+    <path
+        android:pathData="M22,72 L26,74 L28,68 Z M74,72 L70,74 L68,68 Z"
+        android:fillColor="#D97706" />
+
+</vector>

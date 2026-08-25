@@ -102,22 +102,11 @@ fun SchoolTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Indigo600,
-                        border = BorderStroke(1.dp, Indigo400.copy(alpha = 0.3f)),
-                        modifier = Modifier.size(42.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.img_school_logo),
-                            contentDescription = "Graziel Royal Schools Logo",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(3.dp)
-                                .clip(RoundedCornerShape(10.dp)),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
+                    SchoolLogoBadge(
+                        size = 42.dp,
+                        shapeRadius = 12.dp,
+                        borderAlpha = 0.4f
+                    )
 
                     Spacer(modifier = Modifier.width(12.dp))
 

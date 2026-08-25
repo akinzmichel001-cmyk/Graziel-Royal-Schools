@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.model.UserRole
+import com.example.ui.components.SchoolLogoBadge
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
 import com.example.ui.theme.DarkBorder
@@ -170,22 +171,11 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // School Emblem Banner
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Indigo600,
-                border = BorderStroke(1.dp, Indigo400.copy(alpha = 0.4f)),
-                modifier = Modifier.size(64.dp)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.img_school_logo),
-                    contentDescription = "Graziel Royal Emblem",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(6.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Fit
-                )
-            }
+            SchoolLogoBadge(
+                size = 68.dp,
+                shapeRadius = 16.dp,
+                borderAlpha = 0.5f
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
