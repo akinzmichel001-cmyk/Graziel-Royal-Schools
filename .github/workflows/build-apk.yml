@@ -57,6 +57,20 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
+      - name: Accept Android SDK Licenses & Setup Environment
+        run: |
+          echo "=== Setting up Android SDK Licenses & Environment ==="
+          if [ -n "${ANDROID_HOME}" ] && [ -d "${ANDROID_HOME}" ]; then
+            echo "ANDROID_HOME is ${ANDROID_HOME}"
+            mkdir -p "${ANDROID_HOME}/licenses"
+            echo "24333f8a63b1d99d72130e2a33e157766dddd192" > "${ANDROID_HOME}/licenses/android-sdk-license" || true
+            echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> "${ANDROID_HOME}/licenses/android-sdk-license" || true
+            echo "84831b9409646a918e30573bab4c9c91346d8abd" > "${ANDROID_HOME}/licenses/android-sdk-preview-license" || true
+            if [ -x "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" ]; then
+              yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+            fi
+          fi
+
       - name: Ensure required build files (.env & debug keystore)
         run: |
           echo "=== Setting up Build Prerequisites ==="
@@ -68,10 +82,19 @@ jobs:
             fi
           fi
 
+          if [ ! -f "./app/.env" ]; then
+            cp ./.env ./app/.env || true
+          fi
+
           if [ -f "./debug.keystore" ]; then
             echo "debug.keystore already exists in repository root."
-          else
-            echo "debug.keystore is missing. Generating temporary keystore using keytool..."
+          elif [ -f "./debug.keystore.base64" ]; then
+            echo "Decoding debug.keystore from debug.keystore.base64..."
+            base64 -d ./debug.keystore.base64 > ./debug.keystore || true
+          fi
+
+          if [ ! -f "./debug.keystore" ]; then
+            echo "Generating temporary debug.keystore using keytool..."
             "${JAVA_HOME}/bin/keytool" -genkey -v \
               -keystore ./debug.keystore \
               -storepass android \
@@ -93,7 +116,7 @@ jobs:
       - name: Build debug APK
         run: |
           echo "=== Executing Debug APK Build ==="
-          gradle :app:assembleDebug --stacktrace --no-daemon
+          gradle :app:assembleDebug --stacktrace --no-daemon --no-configuration-cache
 
       - name: Verify debug APK output
         run: |
