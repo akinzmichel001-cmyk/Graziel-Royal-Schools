@@ -57,9 +57,17 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Create temporary debug keystore
+      - name: Ensure required build files (.env & debug keystore)
         run: |
-          echo "=== Checking / Generating Debug Keystore ==="
+          echo "=== Setting up Build Prerequisites ==="
+          if [ ! -f "./.env" ]; then
+            echo "Creating fallback .env file..."
+            touch ./.env
+            if [ -f "./.env.example" ]; then
+              cp ./.env.example ./.env
+            fi
+          fi
+
           if [ -f "./debug.keystore" ]; then
             echo "debug.keystore already exists in repository root."
           else
@@ -80,7 +88,7 @@ jobs:
             exit 1
           fi
 
-          echo "Debug keystore verified successfully."
+          echo "Build prerequisites verified successfully."
 
       - name: Build debug APK
         run: |
