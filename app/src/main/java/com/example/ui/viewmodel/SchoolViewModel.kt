@@ -908,15 +908,74 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val navigationBackStack = mutableListOf<AppDestination>()
+
     fun logout() {
+        navigationBackStack.clear()
         firebaseAuthRepo.signOut()
         _firebaseUser.value = null
         _currentUser.value = null
         _currentDestination.value = AppDestination.AUTH
     }
 
-    fun navigateTo(destination: AppDestination) {
+    fun navigateTo(destination: AppDestination, clearBackStack: Boolean = false) {
+        if (clearBackStack) {
+            navigationBackStack.clear()
+        } else if (_currentDestination.value != destination && _currentDestination.value != AppDestination.AUTH) {
+            // Keep stack bounded to prevent unbounded memory growth
+            if (navigationBackStack.size > 20) {
+                navigationBackStack.removeAt(0)
+            }
+            navigationBackStack.add(_currentDestination.value)
+        }
         _currentDestination.value = destination
+    }
+
+    fun navigateBack(): Boolean {
+        // If there's an active dialog/modal, close it first
+        if (_selectedFeeToPay.value != null) {
+            _selectedFeeToPay.value = null
+            return true
+        }
+        if (_activeReceipt.value != null) {
+            _activeReceipt.value = null
+            return true
+        }
+        if (_showReportCardDetail.value) {
+            _showReportCardDetail.value = false
+            return true
+        }
+        if (_selectedAssignment.value != null) {
+            _selectedAssignment.value = null
+            return true
+        }
+        if (_selectedStudentForProfile.value != null && _currentDestination.value == AppDestination.STUDENT_PROFILE) {
+            _selectedStudentForProfile.value = null
+        }
+
+        while (navigationBackStack.isNotEmpty()) {
+            val previous = navigationBackStack.removeAt(navigationBackStack.size - 1)
+            if (previous != _currentDestination.value) {
+                _currentDestination.value = previous
+                return true
+            }
+        }
+
+        // If at a sub-destination with no stack, return to user's home portal
+        val homeDestination = when (_currentRole.value) {
+            UserRole.ADMIN -> AppDestination.ADMIN_DASHBOARD
+            UserRole.TEACHER -> AppDestination.TEACHER_PORTAL
+            UserRole.STUDENT -> AppDestination.STUDENT_PORTAL
+            UserRole.PARENT -> AppDestination.PARENT_PORTAL
+            UserRole.GUEST_PROSPECTIVE -> AppDestination.ADMISSIONS
+        }
+
+        if (_currentDestination.value != homeDestination && _currentDestination.value != AppDestination.AUTH) {
+            _currentDestination.value = homeDestination
+            return true
+        }
+
+        return false
     }
 
     fun switchRole(role: UserRole) {
@@ -1319,6 +1378,14 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setShowReportCardDetail(show: Boolean) {
         _showReportCardDetail.value = show
+    }
+
+    fun openReportCardDetail() {
+        _showReportCardDetail.value = true
+    }
+
+    fun getReportCard(term: String = "2nd Term"): TermReport {
+        return repository.getReportCard(term)
     }
 
     fun submitAdmission(app: AdmissionApplication) {

@@ -91,6 +91,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,6 +108,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.StudentRecord
+import com.example.data.model.SubjectGrade
+import com.example.data.model.TermReport
 import com.example.data.model.UserRole
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
@@ -127,6 +130,8 @@ import com.example.ui.theme.Slate200
 import com.example.ui.theme.Slate300
 import com.example.ui.theme.Slate400
 import com.example.ui.theme.Slate500
+import com.example.ui.theme.Slate600
+import com.example.ui.theme.Slate700
 import com.example.ui.theme.Slate800
 import com.example.ui.theme.Slate900
 import com.example.ui.viewmodel.AppDestination
@@ -162,9 +167,9 @@ fun StudentProfileScreen(
             }
     }
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Academic Dossier, 1: Basic Info, 2: Parent & Emergency, 3: Behavior & Leadership
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedClassFilter by remember { mutableStateOf("All Classes") }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0: Academic Dossier, 1: Basic Info, 2: Parent & Emergency, 3: Behavior & Leadership
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedClassFilter by rememberSaveable { mutableStateOf("All Classes") }
 
     // Dialog States
     var showEditProfileDialog by remember { mutableStateOf(false) }
@@ -271,14 +276,7 @@ fun StudentProfileScreen(
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = {
-                            when (currentUser?.role) {
-                                UserRole.ADMIN -> viewModel.navigateTo(AppDestination.ADMIN_DASHBOARD)
-                                UserRole.TEACHER -> viewModel.navigateTo(AppDestination.TEACHER_PORTAL)
-                                UserRole.PARENT -> viewModel.navigateTo(AppDestination.PARENT_PORTAL)
-                                else -> viewModel.navigateTo(AppDestination.STUDENT_PORTAL)
-                            }
-                        },
+                        onClick = { viewModel.navigateBack() },
                         modifier = Modifier.testTag("student_profile_back_button")
                     ) {
                         Icon(

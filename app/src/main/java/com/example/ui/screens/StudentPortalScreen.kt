@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.data.model.StudentRecord
 import com.example.ui.components.StudentIdCard
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
@@ -116,6 +117,69 @@ fun StudentPortalScreen(
                 session = "2024/2025 Session • Term 2",
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Official Profile & Academic Dossier Quick Access
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = DarkCardSurface,
+                border = BorderStroke(1.dp, Indigo500.copy(alpha = 0.4f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val student = StudentRecord(
+                            id = 1,
+                            fullName = currentUser?.fullName ?: "Adeleke David Oluwaseun",
+                            studentId = currentUser?.regOrStaffId ?: "GRS/2024/0428",
+                            assignedClass = currentUser?.assignedClass ?: "SS 1 Science",
+                            parentName = "Dr. & Mrs. Adeleke",
+                            parentPhone = "+234 803 123 4567",
+                            parentEmail = "adeleke.family@gmail.com",
+                            passcode = "0428",
+                            dateEnrolled = "Sept 2023",
+                            isActive = true,
+                            gender = "Male",
+                            dob = "14 April 2008",
+                            houseName = "Sapphire Blue House",
+                            bloodGroup = "O+",
+                            academicStatus = "Active (Good Standing)",
+                            gpa = "4.65 / 5.0 (Distinction)",
+                            classPosition = "2nd of 34 Students",
+                            attendanceRate = "98.5%",
+                            clubAffiliations = "Junior Engineers & Technicians (JETS), Robotics Club",
+                            behaviorRemark = "Exemplary scholar with strong aptitude in STEM disciplines.",
+                            emergencyContact = "+234 803 123 4567",
+                            homeAddress = "14, Royal Palm Estate, Ifo, Ogun State"
+                        )
+                        viewModel.openStudentProfile(student)
+                    }
+                    .testTag("student_view_profile_dossier_btn")
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Indigo500.copy(alpha = 0.2f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.School, contentDescription = null, tint = Indigo400, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text("Official Student Profile & Dossier", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                            Text("Biodata • Academic Status • Class & Form Master", fontSize = 11.sp, color = Indigo400)
+                        }
+                    }
+                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Slate400, modifier = Modifier.size(18.dp))
+                }
+            }
         }
 
         // Section: Live CBT Exam Banner (Crucial Requirement)

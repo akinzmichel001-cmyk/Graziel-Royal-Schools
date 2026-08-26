@@ -2,6 +2,7 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -75,6 +76,15 @@ fun GrazielRoyalApp(
     val selectedAssignment by viewModel.selectedAssignment.collectAsStateWithLifecycle()
 
     val isAuthScreen = currentDestination == AppDestination.AUTH
+
+    // Intercept back presses to navigate up the destination stack or dismiss modals
+    BackHandler(enabled = !isAuthScreen) {
+        val handled = viewModel.navigateBack()
+        if (!handled) {
+            // When already on root dashboard, another back press goes to Auth
+            viewModel.navigateTo(AppDestination.AUTH)
+        }
+    }
 
     Scaffold(
         modifier = Modifier

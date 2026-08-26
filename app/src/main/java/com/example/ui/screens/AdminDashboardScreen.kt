@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Publish
 import androidx.compose.material.icons.filled.Refresh
@@ -788,6 +789,7 @@ fun AdminDashboardScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
+                                    .clickable { viewModel.openStudentProfile(student) }
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -853,19 +855,35 @@ fun AdminDashboardScreen(
                                         )
                                     }
 
-                                    IconButton(
-                                        onClick = {
-                                            viewModel.deleteStudent(student.id)
-                                            Toast.makeText(context, "Student ${student.fullName} deleted.", Toast.LENGTH_SHORT).show()
-                                        },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete Student",
-                                            tint = Rose400.copy(alpha = 0.8f),
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = { viewModel.openStudentProfile(student) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = "View Profile Dossier",
+                                                tint = Amber400,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(4.dp))
+
+                                        IconButton(
+                                            onClick = {
+                                                viewModel.deleteStudent(student.id)
+                                                Toast.makeText(context, "Student ${student.fullName} deleted.", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete Student",
+                                                tint = Rose400.copy(alpha = 0.8f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
