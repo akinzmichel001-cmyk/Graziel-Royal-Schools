@@ -56,12 +56,23 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
-      - name: Create temporary debug keystore
+      - name: Prepare build environment & keystore
         run: |
+          if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+            cp .env.example .env
+          elif [ ! -f ".env" ]; then
+            touch .env
+          fi
+
           KEYSTORE_PATH="./debug.keystore"
           if [ -f "${KEYSTORE_PATH}" ]; then
             echo "Debug keystore already exists at ${KEYSTORE_PATH}."
-          else
+          elif [ -f "debug.keystore.base64" ]; then
+            echo "Restoring debug keystore from base64..."
+            base64 -d debug.keystore.base64 > "${KEYSTORE_PATH}" || true
+          fi
+
+          if [ ! -f "${KEYSTORE_PATH}" ] || [ ! -s "${KEYSTORE_PATH}" ]; then
             echo "Generating temporary debug keystore..."
             "${JAVA_HOME}/bin/keytool" -genkey -v \
               -keystore "${KEYSTORE_PATH}" \
@@ -78,7 +89,7 @@ jobs:
             echo "ERROR: Failed to create or find debug keystore at ${KEYSTORE_PATH}." >&2
             exit 1
           fi
-          echo "Temporary debug keystore ready."
+          echo "Debug keystore ready."
 
       - name: Build Debug APK
         run: |
