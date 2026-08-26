@@ -1,0 +1,184 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // GRAZIEL ROYAL SCHOOLS - FIRESTORE SECURITY RULES
+    // Comprehensive Role-Based Access Control (RBAC) & Strict Portal Isolation
+    // =========================================================================
+
+    // --- Helper Functions ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getAuthUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasUserDoc() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Role-check helpers with token claim fallback or user document verification
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'ADMIN' ||
+        (hasUserDoc() && getAuthUserDoc().role == 'ADMIN') ||
+        request.auth.token.email == 'admin@grazielroyalschools.edu.ng'
+      );
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'TEACHER' ||
+        (hasUserDoc() && getAuthUserDoc().role == 'TEACHER')
+      );
+    }
+
+    function isStudent() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'STUDENT' ||
+        (hasUserDoc() && getAuthUserDoc().role == 'STUDENT')
+      );
+    }
+
+    function isParent() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'PARENT' ||
+        (hasUserDoc() && getAuthUserDoc().role == 'PARENT')
+      );
+    }
+
+    // =========================================================================
+    // 1. USERS COLLECTION (/users/{userId})
+    // =========================================================================
+    match /users/{userId} {
+      // Admin has full global access. Users can read their own profile document.
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      
+      // Admin can create or modify any user. Users can initialize or update their own non-role fields.
+      allow create: if isAuthenticated() && (isAdmin() || request.auth.uid == userId);
+      allow update: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == userId &&
+        // Prevent users from escalating their own role privilege
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isAdmin']))
+      );
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 2. BILLING & INVOICES COLLECTION (/billing/{billingId})
+    // Portal Isolation: Parents & students only see their designated invoices.
+    // =========================================================================
+    match /billing/{billingId} {
+      // Read access:
+      // - Admin has global access to all student invoices and financial statements.
+      // - Parents can ONLY read billing records matching their specific child's Student ID or Parent Email.
+      // - Students can ONLY read invoices assigned to their specific Student ID.
+      allow read: if isAdmin() || (
+        isParent() && hasUserDoc() && (
+          resource.data.studentId == getAuthUserDoc().childRegNumber ||
+          resource.data.studentId == getAuthUserDoc().childStudentId ||
+          resource.data.parentEmail == request.auth.token.email ||
+          resource.data.parentEmail == getAuthUserDoc().email
+        )
+      ) || (
+        isStudent() && hasUserDoc() && (
+          resource.data.studentId == getAuthUserDoc().regOrStaffId ||
+          resource.data.studentId == getAuthUserDoc().studentId
+        )
+      );
+
+      // Write access: Strictly restricted to Admin (Bursary & Proprietor Desk).
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 3. PAYMENT TRANSACTIONS COLLECTION (/payments/{paymentId})
+    // =========================================================================
+    match /payments/{paymentId} {
+      // Read access:
+      // - Admin has global access to all audit receipts and transaction logs.
+      // - Parents/Students can only view their own payment receipts.
+      allow read: if isAdmin() || (
+        isAuthenticated() && (
+          resource.data.studentId == getAuthUserDoc().childRegNumber ||
+          resource.data.studentId == getAuthUserDoc().regOrStaffId ||
+          resource.data.payerEmail == request.auth.token.email
+        )
+      );
+
+      // Create: Authenticated parents and students can record verified payments.
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        isParent() ||
+        isStudent()
+      );
+
+      // Modification/Deletion: Strictly restricted to Admin audit controls.
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 4. TIMETABLES COLLECTION (/timetables/{timetableId})
+    // =========================================================================
+    match /timetables/{timetableId} {
+      // Read: Any authenticated school member can view timetables relevant to the academic schedule.
+      allow read: if isAuthenticated();
+
+      // Write: Only Admin or authorized Academic Staff (Teachers) can publish or alter schedules.
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    // =========================================================================
+    // 5. ANNOUNCEMENTS COLLECTION (/announcements/{announcementId})
+    // Portal Isolation: Filter by target audience (e.g., "Parents", "Students", "Staff", "All")
+    // =========================================================================
+    match /announcements/{announcementId} {
+      // Read:
+      // - Admin & Teachers can read all announcements.
+      // - Parents can read general ("All") and "Parents" targeted bulletins.
+      // - Students can read general ("All") and "Students" targeted bulletins.
+      allow read: if isAdmin() || isTeacher() || (
+        isAuthenticated() && (
+          resource.data.targetAudience == 'All' ||
+          (isParent() && resource.data.targetAudience == 'Parents') ||
+          (isStudent() && resource.data.targetAudience == 'Students')
+        )
+      );
+
+      // Write: Only Admin and Teachers can broadcast school announcements.
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    // =========================================================================
+    // 6. STUDENT RECORDS COLLECTION (/students/{studentId})
+    // Strict isolation: Parent can only access their specific student's profile & grades.
+    // =========================================================================
+    match /students/{studentId} {
+      // Read:
+      // - Admin has global access to all student dossiers.
+      // - Teachers have access for classroom and grading management.
+      // - Parents can ONLY view records where studentId matches their child's ID or registered email.
+      // - Students can ONLY view their own record.
+      allow read: if isAdmin() || isTeacher() || (
+        isParent() && hasUserDoc() && (
+          studentId == getAuthUserDoc().childRegNumber ||
+          studentId == getAuthUserDoc().childStudentId ||
+          resource.data.parentEmail == request.auth.token.email ||
+          resource.data.parentEmail == getAuthUserDoc().email
+        )
+      ) || (
+        isStudent() && hasUserDoc() && (
+          studentId == getAuthUserDoc().regOrStaffId ||
+          studentId == getAuthUserDoc().studentId
+        )
+      );
+
+      // Write: Only Admin (and Teachers for academic grading updates) can modify.
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isTeacher();
+    }
+  }
+}

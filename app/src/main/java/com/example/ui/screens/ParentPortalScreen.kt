@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -101,8 +102,16 @@ fun ParentPortalScreen(
     val announcements by viewModel.announcements.collectAsStateWithLifecycle()
     val isReportApproved by viewModel.isReportCardApproved.collectAsStateWithLifecycle()
 
-    val totalOutstanding = feeItems.filter { !it.isPaid }.sumOf { it.amount }
-    val totalPaid = feeItems.filter { it.isPaid }.sumOf { it.amount }
+    val studentClass = currentUser?.assignedClass ?: "SS 1 Science"
+    val parentFeeItems = remember(feeItems, studentClass) {
+        feeItems.filter { it.targetClass == "All Classes" || it.targetClass == studentClass }
+    }
+    val parentAnnouncements = remember(announcements) {
+        announcements.filter { it.targetAudience == "All" || it.targetAudience.equals("Parents", ignoreCase = true) }
+    }
+
+    val totalOutstanding = parentFeeItems.filter { !it.isPaid }.sumOf { it.amount }
+    val totalPaid = parentFeeItems.filter { it.isPaid }.sumOf { it.amount }
 
     // Published CBT submissions of the child
     val publishedCbtScores = cbtSubmissions.filter { sub ->
@@ -265,7 +274,15 @@ fun ParentPortalScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    feeItems.forEach { item ->
+                    if (parentFeeItems.isEmpty()) {
+                        Text(
+                            text = "No fee invoices assigned to your ward ($studentClass) at this time.",
+                            fontSize = 12.sp,
+                            color = Slate400,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        parentFeeItems.forEach { item ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -307,6 +324,7 @@ fun ParentPortalScreen(
                                 }
                             }
                         }
+                    }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -505,20 +523,24 @@ fun ParentPortalScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    announcements.take(2).forEach { note ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .background(Slate900, RoundedCornerShape(8.dp))
-                                .border(BorderStroke(1.dp, DarkBorderSubtle), RoundedCornerShape(8.dp))
-                                .padding(10.dp)
-                        ) {
-                            Text(note.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Slate100)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(note.summary, fontSize = 11.sp, color = Slate300, lineHeight = 15.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("${note.date} • ${note.category}", fontSize = 10.sp, color = Indigo400)
+                    if (parentAnnouncements.isEmpty()) {
+                        Text("No parent-targeted announcements posted yet.", fontSize = 12.sp, color = Slate400)
+                    } else {
+                        parentAnnouncements.take(3).forEach { note ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .background(Slate900, RoundedCornerShape(8.dp))
+                                    .border(BorderStroke(1.dp, DarkBorderSubtle), RoundedCornerShape(8.dp))
+                                    .padding(10.dp)
+                            ) {
+                                Text(note.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(note.summary, fontSize = 11.sp, color = Slate300, lineHeight = 15.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("${note.date} • ${note.category}", fontSize = 10.sp, color = Indigo400)
+                            }
                         }
                     }
                 }

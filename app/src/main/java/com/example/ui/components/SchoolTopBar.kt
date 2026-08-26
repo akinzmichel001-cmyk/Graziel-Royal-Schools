@@ -19,11 +19,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
@@ -71,6 +75,7 @@ import com.example.ui.theme.Slate200
 import com.example.ui.theme.Slate300
 import com.example.ui.theme.Slate400
 import com.example.ui.theme.Slate500
+import com.example.ui.theme.Slate700
 import com.example.ui.theme.Slate800
 import com.example.ui.theme.Slate900
 
@@ -139,7 +144,7 @@ fun SchoolTopBar(
                     }
                 }
 
-                // Notification & Role Selector
+                // Notification & Role / Sign Out Controls
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = CircleShape,
@@ -173,12 +178,21 @@ fun SchoolTopBar(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // Role Chip with Dropdown
+                    // Role Chip with Restricted Dropdown
+                    val isAdmin = currentRole == UserRole.ADMIN
+                    val (roleLabel, roleColor) = when (currentRole) {
+                        UserRole.ADMIN -> "Admin (All Access)" to Rose400
+                        UserRole.TEACHER -> "Teacher Portal" to Emerald400
+                        UserRole.STUDENT -> "Student Portal" to Indigo400
+                        UserRole.PARENT -> "Parent Portal" to Amber400
+                        else -> "Prospective" to Slate300
+                    }
+
                     Box {
                         Surface(
                             shape = RoundedCornerShape(20.dp),
                             color = Slate800,
-                            border = BorderStroke(1.dp, DarkBorder),
+                            border = BorderStroke(1.dp, if (isAdmin) Rose500.copy(alpha = 0.4f) else DarkBorder),
                             modifier = Modifier
                                 .testTag("role_switcher_chip")
                                 .clickable { roleMenuExpanded = true }
@@ -187,29 +201,32 @@ fun SchoolTopBar(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val (roleLabel, roleColor) = when (currentRole) {
-                                    UserRole.ADMIN -> "Admin" to Rose400
-                                    UserRole.TEACHER -> "Teacher" to Emerald400
-                                    UserRole.STUDENT -> "Student" to Indigo400
-                                    UserRole.PARENT -> "Parent" to Amber400
-                                    else -> "Student" to Indigo400
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(roleColor)
+                                if (isAdmin) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = "Super Admin Access",
+                                        tint = Rose400,
+                                        modifier = Modifier.size(13.dp)
                                     )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Restricted Portal Access",
+                                        tint = roleColor,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = roleLabel,
+                                    text = if (isAdmin) "Admin" else roleLabel.replace(" Portal", ""),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Slate200
                                 )
+                                Spacer(modifier = Modifier.width(2.dp))
                                 Icon(
                                     imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Switch Role",
+                                    contentDescription = "Portal Menu",
                                     tint = Slate400,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -221,78 +238,114 @@ fun SchoolTopBar(
                             onDismissRequest = { roleMenuExpanded = false },
                             modifier = Modifier.background(DarkCardSurfaceElevated)
                         ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Super Admin Portal", color = Slate100, fontSize = 13.sp)
-                                        if (currentRole == UserRole.ADMIN) {
+                            if (isAdmin) {
+                                // ADMIN ONLY: Full multi-portal navigation & preview controls
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Rose400, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Icon(Icons.Default.Check, contentDescription = null, tint = Rose400, modifier = Modifier.size(16.dp))
+                                            Text("Admin Console (Active)", color = Rose400, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                         }
+                                    },
+                                    onClick = {
+                                        onRoleChange(UserRole.ADMIN)
+                                        roleMenuExpanded = false
                                     }
-                                },
-                                onClick = {
-                                    onRoleChange(UserRole.ADMIN)
-                                    roleMenuExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Teacher Workspace", color = Slate100, fontSize = 13.sp)
-                                        if (currentRole == UserRole.TEACHER) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Icon(Icons.Default.Check, contentDescription = null, tint = Emerald400, modifier = Modifier.size(16.dp))
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Inspect Teacher Workspace", color = Slate100, fontSize = 13.sp)
                                         }
+                                    },
+                                    onClick = {
+                                        onRoleChange(UserRole.TEACHER)
+                                        roleMenuExpanded = false
                                     }
-                                },
-                                onClick = {
-                                    onRoleChange(UserRole.TEACHER)
-                                    roleMenuExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Student Portal", color = Slate100, fontSize = 13.sp)
-                                        if (currentRole == UserRole.STUDENT) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Icon(Icons.Default.Check, contentDescription = null, tint = Indigo400, modifier = Modifier.size(16.dp))
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Inspect Student Portal", color = Slate100, fontSize = 13.sp)
                                         }
+                                    },
+                                    onClick = {
+                                        onRoleChange(UserRole.STUDENT)
+                                        roleMenuExpanded = false
                                     }
-                                },
-                                onClick = {
-                                    onRoleChange(UserRole.STUDENT)
-                                    roleMenuExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Parent Portal", color = Slate100, fontSize = 13.sp)
-                                        if (currentRole == UserRole.PARENT) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Icon(Icons.Default.Check, contentDescription = null, tint = Amber400, modifier = Modifier.size(16.dp))
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Inspect Parent Portal", color = Slate100, fontSize = 13.sp)
                                         }
+                                    },
+                                    onClick = {
+                                        onRoleChange(UserRole.PARENT)
+                                        roleMenuExpanded = false
                                     }
-                                },
-                                onClick = {
-                                    onRoleChange(UserRole.PARENT)
-                                    roleMenuExpanded = false
-                                }
-                            )
+                                )
+                            } else {
+                                // NON-ADMIN USERS: Strict portal isolation indicator
+                                DropdownMenuItem(
+                                    text = {
+                                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.Lock, contentDescription = null, tint = roleColor, modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "$roleLabel (Locked)",
+                                                    color = Slate100,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "Access is strictly restricted to your authorized portal.",
+                                                color = Slate400,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        roleMenuExpanded = false
+                                    }
+                                )
+                            }
+
+                            // Sign Out / Switch Portal for all
                             DropdownMenuItem(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Logout, contentDescription = null, tint = Rose400, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Sign Out / Switch User", color = Rose400, fontSize = 13.sp)
+                                        Text("Sign Out / Switch Portal", color = Rose400, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                     }
                                 },
                                 onClick = {
                                     roleMenuExpanded = false
                                     onLogout()
                                 }
+                            )
+                        }
+                    }
+
+                    // Direct Logout button for non-admin users for instant one-tap exit
+                    if (!isAdmin) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        IconButton(
+                            onClick = onLogout,
+                            modifier = Modifier
+                                .testTag("top_bar_direct_logout_button")
+                                .size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Logout,
+                                contentDescription = "Sign Out to Portal Selection",
+                                tint = Rose400,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }

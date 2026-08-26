@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DateRange
@@ -45,11 +47,15 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Publish
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -93,6 +99,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.AdminSecurityConfig
 import com.example.data.model.CbtTest
 import com.example.data.model.FeeItem
+import com.example.data.model.PaymentTransaction
 import com.example.data.model.StudentRecord
 import com.example.data.model.TeacherAccount
 import com.example.ui.theme.Amber400
@@ -129,14 +136,21 @@ fun AdminDashboardScreen(
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val cbtTests by viewModel.cbtTests.collectAsStateWithLifecycle()
     val feeItems by viewModel.feeItems.collectAsStateWithLifecycle()
+    val payments by viewModel.payments.collectAsStateWithLifecycle()
     val staffClockRecords by viewModel.staffClockRecords.collectAsStateWithLifecycle()
     val isReportApproved by viewModel.isReportCardApproved.collectAsStateWithLifecycle()
     val isReportPublished by viewModel.isReportCardPublished.collectAsStateWithLifecycle()
     val teacherAccounts by viewModel.teacherAccounts.collectAsStateWithLifecycle()
     val studentRecords by viewModel.studentRecords.collectAsStateWithLifecycle()
     val adminSecurityConfig by viewModel.adminSecurityConfig.collectAsStateWithLifecycle()
+    val isFirestoreInitializing by viewModel.isFirestoreInitializing.collectAsStateWithLifecycle()
+    val firestoreStatus by viewModel.firestoreStatus.collectAsStateWithLifecycle()
+    val isFirestoreInitialized by viewModel.isFirestoreInitialized.collectAsStateWithLifecycle()
 
     var showCreateFeeDialog by remember { mutableStateOf(false) }
+    var showDeleteFeeDialog by remember { mutableStateOf<FeeItem?>(null) }
+    var showDeletePaymentDialog by remember { mutableStateOf<PaymentTransaction?>(null) }
+    var revealedTeacherPasskeyIds by remember { mutableStateOf(setOf<Int>()) }
     var showBroadcastDialog by remember { mutableStateOf(false) }
     var showAddTeacherDialog by remember { mutableStateOf(false) }
     var showAddStudentDialog by remember { mutableStateOf(false) }
@@ -357,6 +371,182 @@ fun AdminDashboardScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // SECTION: FIRESTORE CLOUD COLLECTIONS & SECURITY RULES MANAGEMENT
+        // =========================================================================
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkCardSurfaceElevated),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Rose500.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Rose500.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = Rose400,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Firestore Collections & RBAC Security",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Portal Isolation • Admin Global Access • Parent Scoped",
+                                    fontSize = 11.sp,
+                                    color = Rose400
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { viewModel.initializeFirestoreCollections() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Rose500),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !isFirestoreInitializing,
+                            modifier = Modifier.testTag("admin_init_firestore_collections_button")
+                        ) {
+                            Icon(
+                                imageVector = if (isFirestoreInitializing) Icons.Default.CloudSync else Icons.Default.Storage,
+                                contentDescription = null,
+                                tint = Slate900,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isFirestoreInitializing) "Initializing..." else "Seed / Sync",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Slate900
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Grid of Collections and Security Rules Status
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Slate900, RoundedCornerShape(10.dp))
+                            .border(BorderStroke(1.dp, DarkBorderSubtle), RoundedCornerShape(10.dp))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Collection 1: users
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Group, contentDescription = null, tint = Indigo400, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("users", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                                    Text("UID profiles, roles (ADMIN, TEACHER, STUDENT, PARENT)", fontSize = 10.sp, color = Slate400)
+                                }
+                            }
+                            Surface(shape = RoundedCornerShape(6.dp), color = Indigo500.copy(alpha = 0.2f)) {
+                                Text("Admin / Self Read", fontSize = 10.sp, color = Indigo400, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+
+                        Divider(color = DarkBorderSubtle)
+
+                        // Collection 2: billing
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CreditCard, contentDescription = null, tint = Amber400, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("billing", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                                    Text("School tuition & invoices tagged by studentId", fontSize = 10.sp, color = Slate400)
+                                }
+                            }
+                            Surface(shape = RoundedCornerShape(6.dp), color = Amber500.copy(alpha = 0.2f)) {
+                                Text("Parent Child-Only Access", fontSize = 10.sp, color = Amber400, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+
+                        Divider(color = DarkBorderSubtle)
+
+                        // Collection 3: timetables
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.TableChart, contentDescription = null, tint = Emerald400, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("timetables", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                                    Text("Weekly schedules by assignedClass & dayOfWeek", fontSize = 10.sp, color = Slate400)
+                                }
+                            }
+                            Surface(shape = RoundedCornerShape(6.dp), color = Emerald500.copy(alpha = 0.2f)) {
+                                Text("Class-Scoped Read", fontSize = 10.sp, color = Emerald400, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+
+                        Divider(color = DarkBorderSubtle)
+
+                        // Collection 4: announcements
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Campaign, contentDescription = null, tint = Rose400, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("announcements", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                                    Text("School broadcasts tagged by targetAudience", fontSize = 10.sp, color = Slate400)
+                                }
+                            }
+                            Surface(shape = RoundedCornerShape(6.dp), color = Rose500.copy(alpha = 0.2f)) {
+                                Text("Audience Filtered", fontSize = 10.sp, color = Rose400, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+                    }
+
+                    if (firestoreStatus != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = firestoreStatus ?: "",
+                            fontSize = 11.sp,
+                            color = if (isFirestoreInitialized) Emerald400 else Slate400
+                        )
                     }
                 }
             }
@@ -635,7 +825,8 @@ fun AdminDashboardScreen(
                                     Divider(color = DarkBorderSubtle.copy(alpha = 0.5f))
                                     Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Passkey Display Row
+                                    // Passkey Display Row (Discreet with Reveal Toggle for Admin)
+                                    val isPasskeyRevealed = revealedTeacherPasskeyIds.contains(teacher.id)
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -660,15 +851,35 @@ fun AdminDashboardScreen(
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
-                                                text = teacher.passkey,
+                                                text = if (isPasskeyRevealed) teacher.passkey else "••••••••",
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = Amber400,
+                                                color = if (isPasskeyRevealed) Amber400 else Slate400,
                                                 letterSpacing = 1.sp
                                             )
                                         }
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = {
+                                                    revealedTeacherPasskeyIds = if (isPasskeyRevealed) {
+                                                        revealedTeacherPasskeyIds - teacher.id
+                                                    } else {
+                                                        revealedTeacherPasskeyIds + teacher.id
+                                                    }
+                                                },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isPasskeyRevealed) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                                    contentDescription = "Toggle Passkey Visibility",
+                                                    tint = Slate300,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(4.dp))
+
                                             IconButton(
                                                 onClick = { copyToClipboard("Teacher Passkey", teacher.passkey) },
                                                 modifier = Modifier.size(24.dp)
@@ -1086,12 +1297,12 @@ fun AdminDashboardScreen(
             }
         }
 
-        // Section: Fee Billing & Finance Control
+        // Section: Fee Billing & Finance Control (Admin & Parent Synchronized)
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, DarkBorder),
+                border = BorderStroke(1.dp, Amber500.copy(alpha = 0.35f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -1101,19 +1312,34 @@ fun AdminDashboardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CreditCard,
-                                contentDescription = null,
-                                tint = Amber400,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Fee Billing Control (Parent Portal)",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Slate100
-                            )
+                            Surface(
+                                shape = CircleShape,
+                                color = Amber500.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.CreditCard,
+                                        contentDescription = null,
+                                        tint = Amber400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Fee Billing & Records",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Admin can create & delete bills for both portals",
+                                    fontSize = 11.sp,
+                                    color = Amber400
+                                )
+                            }
                         }
 
                         Button(
@@ -1130,34 +1356,169 @@ fun AdminDashboardScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Bills created here are strictly displayed on the Parent Portal only (hidden from students).",
+                        text = "Published fee items are synced directly to the Parent Portal. Deleting a billing invoice or payment record here removes it permanently from both the Admin Console and the Parent view.",
                         fontSize = 11.sp,
-                        color = Slate400
+                        color = Slate400,
+                        lineHeight = 16.sp
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    feeItems.take(3).forEach { item ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                                .background(Slate900, RoundedCornerShape(8.dp))
-                                .border(BorderStroke(1.dp, DarkBorderSubtle), RoundedCornerShape(8.dp))
-                                .padding(10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(item.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Slate100)
-                                Text("${item.targetClass} • Due: ${item.dueDate}", fontSize = 11.sp, color = Slate400)
+                    Text(
+                        text = "Active Fee Invoices (${feeItems.size}):",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Slate200
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    if (feeItems.isEmpty()) {
+                        Text(
+                            text = "No fee billing records found. Tap '+ Create Bill' to add one.",
+                            fontSize = 12.sp,
+                            color = Slate500,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        feeItems.forEach { item ->
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Slate900,
+                                border = BorderStroke(1.dp, DarkBorderSubtle),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = item.title,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Slate100
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = if (item.isPaid) Emerald500.copy(alpha = 0.2f) else Amber500.copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = if (item.isPaid) "PAID" else "UNPAID",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = if (item.isPaid) Emerald400 else Amber400,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "${item.targetClass} • ${item.term} • Due: ${item.dueDate}",
+                                            fontSize = 11.sp,
+                                            color = Slate400
+                                        )
+                                        Text(
+                                            text = "₦${String.format("%,d", item.amount.toInt())}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Amber400
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = { showDeleteFeeDialog = item },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .testTag("delete_fee_item_${item.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete Bill",
+                                            tint = Rose400,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
                             }
-                            Text(
-                                "₦${String.format("%,d", item.amount.toInt())}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Amber400
-                            )
+                        }
+                    }
+
+                    // Payment Transactions Log
+                    if (payments.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "Payment & Settlement History (${payments.size}):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Slate200
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        payments.forEach { payment ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Slate900,
+                                border = BorderStroke(1.dp, DarkBorderSubtle),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = payment.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Slate100
+                                        )
+                                        Text(
+                                            text = "Paid by: ${payment.studentName} (${payment.studentId}) • ${payment.paymentMethod}",
+                                            fontSize = 10.sp,
+                                            color = Slate400
+                                        )
+                                        Text(
+                                            text = "Receipt: ${payment.receiptNumber} • ${payment.date}",
+                                            fontSize = 10.sp,
+                                            color = Emerald400
+                                        )
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "₦${String.format("%,d", payment.amount.toInt())}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Emerald400
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        IconButton(
+                                            onClick = { showDeletePaymentDialog = payment },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete Payment",
+                                                tint = Rose400.copy(alpha = 0.8f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1994,6 +2355,124 @@ fun AdminDashboardScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showUpdateBankDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: CONFIRM DELETE FEE BILLING INVOICE
+    // =========================================================================
+    showDeleteFeeDialog?.let { feeToDelete ->
+        AlertDialog(
+            onDismissRequest = { showDeleteFeeDialog = null },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Rose400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delete Fee Invoice", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Are you sure you want to delete '${feeToDelete.title}' for ${feeToDelete.targetClass}?",
+                        fontSize = 13.sp,
+                        color = Slate200,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Amount: ₦${String.format("%,d", feeToDelete.amount.toInt())} • Term: ${feeToDelete.term}",
+                        fontSize = 12.sp,
+                        color = Amber400
+                    )
+                    Text(
+                        text = "This bill will be permanently removed from both the Admin Console and the Parent Portal.",
+                        fontSize = 11.sp,
+                        color = Rose400
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteFeeItem(feeToDelete.id) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Fee invoice deleted successfully.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to delete fee invoice.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        showDeleteFeeDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+                ) {
+                    Text("Delete Permanently", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteFeeDialog = null }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: CONFIRM DELETE PAYMENT RECORD
+    // =========================================================================
+    showDeletePaymentDialog?.let { paymentToDelete ->
+        AlertDialog(
+            onDismissRequest = { showDeletePaymentDialog = null },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Rose400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delete Payment Record", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Are you sure you want to delete payment record '${paymentToDelete.receiptNumber}'?",
+                        fontSize = 13.sp,
+                        color = Slate200,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Student: ${paymentToDelete.studentName} • Amount: ₦${String.format("%,d", paymentToDelete.amount.toInt())}",
+                        fontSize = 12.sp,
+                        color = Emerald400
+                    )
+                    Text(
+                        text = "This payment record will be permanently deleted from the financial audit log.",
+                        fontSize = 11.sp,
+                        color = Slate400
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deletePaymentTransaction(paymentToDelete.id) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Payment transaction deleted.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to delete payment transaction.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        showDeletePaymentDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+                ) {
+                    Text("Delete Record", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeletePaymentDialog = null }) {
                     Text("Cancel", color = Slate300)
                 }
             }

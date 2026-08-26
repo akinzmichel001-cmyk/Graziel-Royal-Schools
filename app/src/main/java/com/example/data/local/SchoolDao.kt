@@ -125,6 +125,9 @@ interface SchoolDao {
     @Update
     suspend fun updateFeeItem(feeItem: FeeItem)
 
+    @Query("DELETE FROM fee_items WHERE id = :id")
+    suspend fun deleteFeeItem(id: Int)
+
     // Payments
     @Query("SELECT * FROM payment_transactions ORDER BY id DESC")
     fun getAllPayments(): Flow<List<PaymentTransaction>>
@@ -134,6 +137,9 @@ interface SchoolDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPayments(payments: List<PaymentTransaction>)
+
+    @Query("DELETE FROM payment_transactions WHERE id = :id")
+    suspend fun deletePayment(id: Int)
 
     // Admission Applications
     @Query("SELECT * FROM admission_applications ORDER BY id DESC")

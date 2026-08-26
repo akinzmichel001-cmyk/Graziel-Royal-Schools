@@ -1044,6 +1044,14 @@ class SchoolRepository(private val dao: SchoolDao) {
         dao.insertFeeItem(feeItem)
     }
 
+    suspend fun deleteFeeItem(feeItemId: Int) {
+        dao.deleteFeeItem(feeItemId)
+    }
+
+    suspend fun deletePayment(paymentId: Int) {
+        dao.deletePayment(paymentId)
+    }
+
     suspend fun payFeeItem(feeItem: FeeItem, paymentMethod: String, studentName: String = "Adeleke David O.", studentId: String = "GRS/2024/0428"): PaymentTransaction {
         val updated = feeItem.copy(isPaid = true)
         dao.updateFeeItem(updated)

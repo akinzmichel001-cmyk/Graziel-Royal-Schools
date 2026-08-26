@@ -31,6 +31,11 @@ import com.example.data.repository.SchoolRepository
 import com.example.data.service.AiTutorService
 import com.example.data.auth.AuthResult
 import com.example.data.auth.FirebaseAuthRepository
+import com.example.data.firestore.FirestoreService
+import com.example.data.firestore.FirestoreBillingItem
+import com.example.data.firestore.FirestoreUser
+import com.example.data.firestore.FirestoreTimetable
+import com.example.data.firestore.FirestoreAnnouncement
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -64,9 +69,13 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
 
     private val repository: SchoolRepository
     val firebaseAuthRepo: FirebaseAuthRepository = FirebaseAuthRepository(application)
+    val firestoreService: FirestoreService = FirestoreService(application)
 
     private val _isFirebaseConfigured = MutableStateFlow(firebaseAuthRepo.isFirebaseInitialized)
     val isFirebaseConfigured: StateFlow<Boolean> = _isFirebaseConfigured.asStateFlow()
+
+    private val _isFirestoreInitialized = MutableStateFlow(firestoreService.isFirebaseInitialized)
+    val isFirestoreInitialized: StateFlow<Boolean> = _isFirestoreInitialized.asStateFlow()
 
     private val _firebaseUser = MutableStateFlow<FirebaseUser?>(firebaseAuthRepo.currentUser)
     val firebaseUser: StateFlow<FirebaseUser?> = _firebaseUser.asStateFlow()
@@ -261,6 +270,9 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch {
             repository.seedInitialDataIfEmpty()
+            if (firestoreService.isFirebaseInitialized) {
+                firestoreService.initializeCollectionsIfEmpty()
+            }
         }
     }
 
@@ -322,8 +334,8 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
      * Teacher Login: Validates against unique passkey issued by admin (and optional Staff ID/Email)
      */
     fun loginTeacherWithPasskey(
-        staffIdOrEmail: String,
         passkey: String,
+        staffIdOrEmail: String = "",
         onResult: (Boolean, String) -> Unit
     ) {
         val trimmedPasskey = passkey.trim()
@@ -919,6 +931,35 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun navigateTo(destination: AppDestination, clearBackStack: Boolean = false) {
+        // Enforce strict portal restriction: Only Admin has cross-portal access
+        val role = _currentRole.value
+        val isAllowed = when (destination) {
+            AppDestination.AUTH -> true
+            AppDestination.ADMIN_DASHBOARD -> role == UserRole.ADMIN
+            AppDestination.TEACHER_PORTAL -> role == UserRole.ADMIN || role == UserRole.TEACHER
+            AppDestination.CBT_STUDIO -> role == UserRole.ADMIN || role == UserRole.TEACHER
+            AppDestination.STUDENT_PROFILE -> role == UserRole.ADMIN || role == UserRole.TEACHER
+            AppDestination.STUDENT_PORTAL -> role == UserRole.ADMIN || role == UserRole.STUDENT
+            AppDestination.CBT_EXAM -> role == UserRole.ADMIN || role == UserRole.STUDENT
+            AppDestination.HOMEWORK -> role == UserRole.ADMIN || role == UserRole.STUDENT || role == UserRole.TEACHER
+            AppDestination.PARENT_PORTAL -> role == UserRole.ADMIN || role == UserRole.PARENT
+            AppDestination.FINANCE -> role == UserRole.ADMIN || role == UserRole.PARENT
+            AppDestination.GROUP_CHAT -> role == UserRole.ADMIN || role == UserRole.TEACHER || role == UserRole.STUDENT
+            AppDestination.SCHEDULE -> role == UserRole.ADMIN || role == UserRole.TEACHER || role == UserRole.STUDENT || role == UserRole.PARENT
+            AppDestination.ACADEMICS -> role == UserRole.ADMIN || role == UserRole.STUDENT || role == UserRole.PARENT
+            AppDestination.ADMISSIONS -> true
+            AppDestination.AI_TUTOR -> true
+        }
+
+        if (!isAllowed) {
+            Toast.makeText(
+                getApplication(),
+                "Access Restricted: Only the School Admin has access across multiple portals.",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
         if (clearBackStack) {
             navigationBackStack.clear()
         } else if (_currentDestination.value != destination && _currentDestination.value != AppDestination.AUTH) {
@@ -979,6 +1020,16 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun switchRole(role: UserRole) {
+        // Strict Security Guard: Only ADMIN (School Proprietor) is allowed to switch portals
+        if (_currentRole.value != UserRole.ADMIN) {
+            Toast.makeText(
+                getApplication(),
+                "Access Denied: Only the School Admin can switch portals. Please sign out first.",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
         val matchingAccount = repository.defaultAccounts.find { it.role == role }
         if (matchingAccount != null) {
             loginAs(matchingAccount)
@@ -1236,6 +1287,34 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
             repository.createFeeItem(feeItem)
             Toast.makeText(getApplication(), "Fee bill '$title' published for $targetClass", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun deleteFeeItem(feeItemId: Int, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.deleteFeeItem(feeItemId)
+                Toast.makeText(getApplication(), "Billing invoice deleted from both Admin and Parent portals.", Toast.LENGTH_SHORT).show()
+                onComplete(true)
+            } catch (e: Exception) {
+                onComplete(false)
+            }
+        }
+    }
+
+    fun deletePaymentTransaction(paymentId: Int, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.deletePayment(paymentId)
+                Toast.makeText(getApplication(), "Payment transaction deleted.", Toast.LENGTH_SHORT).show()
+                onComplete(true)
+            } catch (e: Exception) {
+                onComplete(false)
+            }
+        }
+    }
+
+    fun openAdmissionPortal() {
+        _currentDestination.value = AppDestination.ADMISSIONS
     }
 
     fun selectFeeToPay(feeItem: FeeItem?) {
@@ -1508,5 +1587,36 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
 
     fun sendAiMessage(userText: String) {
         sendAiPrompt(userText)
+    }
+
+    // =========================================================================
+    // FIRESTORE COLLECTIONS INITIALIZATION & PORTAL SECURITY
+    // =========================================================================
+
+    private val _isFirestoreInitializing = MutableStateFlow(false)
+    val isFirestoreInitializing: StateFlow<Boolean> = _isFirestoreInitializing.asStateFlow()
+
+    private val _firestoreStatus = MutableStateFlow<String?>(null)
+    val firestoreStatus: StateFlow<String?> = _firestoreStatus.asStateFlow()
+
+    fun initializeFirestoreCollections(onComplete: (Boolean, String) -> Unit = { _, _ -> }) {
+        _isFirestoreInitializing.value = true
+        _firestoreStatus.value = "Initializing Firestore collections..."
+
+        viewModelScope.launch {
+            val result = firestoreService.initializeCollectionsIfEmpty()
+            _isFirestoreInitializing.value = false
+            result.onSuccess { msg ->
+                _isFirestoreInitialized.value = true
+                _firestoreStatus.value = "Firestore online: collections (users, billing, timetables, announcements) initialized & RBAC security active."
+                Toast.makeText(getApplication(), "Cloud Firestore collections initialized!", Toast.LENGTH_SHORT).show()
+                onComplete(true, msg)
+            }.onFailure { err ->
+                val errorMsg = err.localizedMessage ?: "Failed to connect to Firestore."
+                _firestoreStatus.value = "Firestore status: Offline local mode (${errorMsg})"
+                Toast.makeText(getApplication(), "Firestore: ${errorMsg}", Toast.LENGTH_SHORT).show()
+                onComplete(false, errorMsg)
+            }
+        }
     }
 }
