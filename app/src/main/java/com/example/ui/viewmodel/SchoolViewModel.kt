@@ -48,6 +48,7 @@ enum class AppDestination {
     TEACHER_PORTAL,
     STUDENT_PORTAL,
     PARENT_PORTAL,
+    STUDENT_PROFILE,
     CBT_STUDIO,
     CBT_EXAM,
     GROUP_CHAT,
@@ -138,6 +139,10 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _showNotificationBox = MutableStateFlow(false)
     val showNotificationBox: StateFlow<Boolean> = _showNotificationBox.asStateFlow()
+
+    // Selected student for Profile Dossier inspection & management
+    private val _selectedStudentForProfile = MutableStateFlow<StudentRecord?>(null)
+    val selectedStudentForProfile: StateFlow<StudentRecord?> = _selectedStudentForProfile.asStateFlow()
 
     private val aiTutorService = AiTutorService()
 
@@ -582,6 +587,74 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteStudent(studentId: Int) {
         viewModelScope.launch {
             repository.deleteStudent(studentId)
+            if (_selectedStudentForProfile.value?.id == studentId) {
+                _selectedStudentForProfile.value = null
+            }
+        }
+    }
+
+    fun selectStudentForProfile(student: StudentRecord?) {
+        _selectedStudentForProfile.value = student
+    }
+
+    fun openStudentProfile(student: StudentRecord) {
+        _selectedStudentForProfile.value = student
+        _currentDestination.value = AppDestination.STUDENT_PROFILE
+    }
+
+    fun updateStudentProfile(updatedStudent: StudentRecord, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.updateStudentRecord(updatedStudent)
+                _selectedStudentForProfile.value = updatedStudent
+                Toast.makeText(getApplication(), "Student profile updated for ${updatedStudent.fullName}", Toast.LENGTH_SHORT).show()
+                onComplete(true)
+            } catch (e: Exception) {
+                Toast.makeText(getApplication(), "Failed to update student profile: ${e.message}", Toast.LENGTH_SHORT).show()
+                onComplete(false)
+            }
+        }
+    }
+
+    fun updateStudentAcademicStatus(studentId: Int, newStatus: String) {
+        viewModelScope.launch {
+            val current = studentRecords.value.find { it.id == studentId } ?: _selectedStudentForProfile.value
+            if (current != null) {
+                val updated = current.copy(academicStatus = newStatus)
+                repository.updateStudentRecord(updated)
+                if (_selectedStudentForProfile.value?.id == studentId) {
+                    _selectedStudentForProfile.value = updated
+                }
+                Toast.makeText(getApplication(), "Academic status updated to '$newStatus'", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun promoteStudentClass(studentId: Int, newClass: String) {
+        viewModelScope.launch {
+            val current = studentRecords.value.find { it.id == studentId } ?: _selectedStudentForProfile.value
+            if (current != null) {
+                val updated = current.copy(assignedClass = newClass)
+                repository.updateStudentRecord(updated)
+                if (_selectedStudentForProfile.value?.id == studentId) {
+                    _selectedStudentForProfile.value = updated
+                }
+                Toast.makeText(getApplication(), "${current.fullName} promoted to $newClass!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun updateStudentBehaviorRemark(studentId: Int, newRemark: String) {
+        viewModelScope.launch {
+            val current = studentRecords.value.find { it.id == studentId } ?: _selectedStudentForProfile.value
+            if (current != null) {
+                val updated = current.copy(behaviorRemark = newRemark)
+                repository.updateStudentRecord(updated)
+                if (_selectedStudentForProfile.value?.id == studentId) {
+                    _selectedStudentForProfile.value = updated
+                }
+                Toast.makeText(getApplication(), "Conduct remark updated.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

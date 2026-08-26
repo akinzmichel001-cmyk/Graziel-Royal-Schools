@@ -745,7 +745,19 @@ class SchoolRepository(private val dao: SchoolDao) {
                 parentEmail = "parent@grazielroyalschools.edu.ng",
                 passcode = "0428",
                 dateEnrolled = "Sept 2024",
-                isActive = true
+                isActive = true,
+                gender = "Male",
+                dob = "14 May 2008",
+                houseName = "Royal Blue House",
+                bloodGroup = "O+",
+                academicStatus = "Academic Scholar (Honors)",
+                gpa = "4.85 / 5.0 (Distinction)",
+                classPosition = "1st of 34 Students",
+                attendanceRate = "98.2%",
+                clubAffiliations = "STEM & Robotics Club (President), Literary & Debate Society",
+                behaviorRemark = "Outstanding leadership, disciplined demeanor, and exemplary academic curiosity.",
+                emergencyContact = "+234 816 620 5113",
+                homeAddress = "Plot 12, Royal Palm Estate, Ifo/Ota Axis, Ogun State"
             ),
             StudentRecord(
                 id = 2,
@@ -757,7 +769,19 @@ class SchoolRepository(private val dao: SchoolDao) {
                 parentEmail = "babalola.parents@gmail.com",
                 passcode = "0429",
                 dateEnrolled = "Sept 2024",
-                isActive = true
+                isActive = true,
+                gender = "Female",
+                dob = "22 August 2008",
+                houseName = "Emerald Green House",
+                bloodGroup = "A+",
+                academicStatus = "Academic Scholar",
+                gpa = "4.70 / 5.0 (Distinction)",
+                classPosition = "2nd of 34 Students",
+                attendanceRate = "96.5%",
+                clubAffiliations = "Press Club & School Choir (Section Leader)",
+                behaviorRemark = "Highly articulate, punctual, and helpful to classmates in chemistry practicals.",
+                emergencyContact = "+234 803 778 9900",
+                homeAddress = "14, Harmony Crescent, Ota, Ogun State"
             ),
             StudentRecord(
                 id = 3,
@@ -769,7 +793,19 @@ class SchoolRepository(private val dao: SchoolDao) {
                 parentEmail = "chukwu.praise@gmail.com",
                 passcode = "0430",
                 dateEnrolled = "Sept 2024",
-                isActive = true
+                isActive = true,
+                gender = "Male",
+                dob = "10 January 2009",
+                houseName = "Golden Sun House",
+                bloodGroup = "B+",
+                academicStatus = "Active (Good Standing)",
+                gpa = "4.25 / 5.0 (Very Good)",
+                classPosition = "4th of 34 Students",
+                attendanceRate = "94.0%",
+                clubAffiliations = "Junior Engineers & Technicians (JETS), Chess Club",
+                behaviorRemark = "Diligent student with strong focus in Technical Drawing and Further Maths.",
+                emergencyContact = "+234 802 445 6677",
+                homeAddress = "28, Heritage Avenue, Ifo, Ogun State"
             ),
             StudentRecord(
                 id = 4,
@@ -781,7 +817,19 @@ class SchoolRepository(private val dao: SchoolDao) {
                 parentEmail = "ogunleye.family@gmail.com",
                 passcode = "0431",
                 dateEnrolled = "Sept 2023",
-                isActive = true
+                isActive = true,
+                gender = "Male",
+                dob = "03 November 2007",
+                houseName = "Ruby Red House",
+                bloodGroup = "O+",
+                academicStatus = "Active (Good Standing)",
+                gpa = "4.40 / 5.0 (Very Good)",
+                classPosition = "3rd of 28 Students",
+                attendanceRate = "97.1%",
+                clubAffiliations = "Drama & Cultural Troupe (Captain), Literary Society",
+                behaviorRemark = "Expressive orator, deeply committed to Yoruba cultural heritage studies.",
+                emergencyContact = "+234 814 556 6778",
+                homeAddress = "5, Grace Villa, Tollgate Axis, Sango-Ota"
             ),
             StudentRecord(
                 id = 5,
@@ -793,7 +841,19 @@ class SchoolRepository(private val dao: SchoolDao) {
                 parentEmail = "fashola.zainab@gmail.com",
                 passcode = "0432",
                 dateEnrolled = "Sept 2023",
-                isActive = true
+                isActive = true,
+                gender = "Female",
+                dob = "18 June 2011",
+                houseName = "Emerald Green House",
+                bloodGroup = "AA",
+                academicStatus = "Academic Scholar (Junior)",
+                gpa = "4.90 / 5.0 (Distinction)",
+                classPosition = "1st of 40 Students",
+                attendanceRate = "100.0%",
+                clubAffiliations = "Spelling Bee Champion, Junior Mathematics League",
+                behaviorRemark = "Impeccable attendance record and outstanding cognitive capabilities.",
+                emergencyContact = "+234 808 123 4567",
+                homeAddress = "8, Diamond Estate, Ifo, Ogun State"
             )
         )
 

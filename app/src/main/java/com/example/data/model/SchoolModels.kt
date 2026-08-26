@@ -50,7 +50,19 @@ data class StudentRecord(
     val parentEmail: String,
     val passcode: String = "1234",
     val dateEnrolled: String = "Sept 2024",
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val gender: String = "Male",
+    val dob: String = "14 May 2008",
+    val houseName: String = "Royal Blue House",
+    val bloodGroup: String = "O+",
+    val academicStatus: String = "Active (Good Standing)", // "Active (Good Standing)", "Academic Scholar / Honors", "Under Observation", "On Probation", "Graduated"
+    val gpa: String = "4.85 / 5.0 (Distinction)",
+    val classPosition: String = "1st of 34 Students",
+    val attendanceRate: String = "98.2%",
+    val clubAffiliations: String = "STEM & Robotics Club (President), Literary & Debate Society",
+    val behaviorRemark: String = "Outstanding leadership, disciplined demeanor, and exemplary academic curiosity.",
+    val emergencyContact: String = "+234 816 620 5113",
+    val homeAddress: String = "Plot 12, Royal Palm Estate, Ifo/Ota Axis, Ogun State"
 )
 
 @Entity(tableName = "admin_security")

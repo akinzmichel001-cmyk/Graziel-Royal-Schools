@@ -37,6 +37,7 @@ import com.example.ui.screens.HomeworkScreen
 import com.example.ui.screens.ParentPortalScreen
 import com.example.ui.screens.ScheduleScreen
 import com.example.ui.screens.StudentPortalScreen
+import com.example.ui.screens.StudentProfileScreen
 import com.example.ui.screens.TeacherPortalScreen
 import com.example.ui.theme.DarkCanvas
 import com.example.ui.theme.GrazielRoyalTheme
@@ -123,6 +124,7 @@ fun GrazielRoyalApp(
                     AppDestination.TEACHER_PORTAL -> TeacherPortalScreen(viewModel = viewModel)
                     AppDestination.STUDENT_PORTAL -> StudentPortalScreen(viewModel = viewModel)
                     AppDestination.PARENT_PORTAL -> ParentPortalScreen(viewModel = viewModel)
+                    AppDestination.STUDENT_PROFILE -> StudentProfileScreen(viewModel = viewModel)
                     AppDestination.CBT_STUDIO -> CbtStudioScreen(viewModel = viewModel)
                     AppDestination.CBT_EXAM -> CbtExamScreen(viewModel = viewModel)
                     AppDestination.GROUP_CHAT -> GroupChatScreen(viewModel = viewModel)
