@@ -270,7 +270,7 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch {
             repository.seedInitialDataIfEmpty()
-            if (firestoreService.isFirebaseInitialized) {
+            if (firestoreService.isFirebaseInitialized && firebaseAuthRepo.currentUser != null) {
                 firestoreService.initializeCollectionsIfEmpty()
             }
         }
