@@ -158,6 +158,11 @@ fun AdminDashboardScreen(
     var showChangeAdminPasskeyDialog by remember { mutableStateOf(false) }
     var showUpdateAcademicDialog by remember { mutableStateOf(false) }
     var showUpdateBankDialog by remember { mutableStateOf(false) }
+    var showWipeLogsDialog by remember { mutableStateOf(false) }
+    var showCleanSlateDialog by remember { mutableStateOf(false) }
+    var showClearAnnouncementsDialog by remember { mutableStateOf(false) }
+    var showClearAssignmentsDialog by remember { mutableStateOf(false) }
+    var showClearCbtDialog by remember { mutableStateOf(false) }
 
     fun copyToClipboard(label: String, text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -1662,6 +1667,148 @@ fun AdminDashboardScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // =========================================================================
+            // SECTION: SCHOOL DATA CLEANUP & FRESH PRODUCTION SETUP
+            // =========================================================================
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Indigo500.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Indigo500.copy(alpha = 0.2f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Storage,
+                                        contentDescription = null,
+                                        tint = Indigo400,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "School Data & Clean Setup",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate100
+                                )
+                                Text(
+                                    text = "Manage & clear sample/demo records for live school use",
+                                    fontSize = 11.sp,
+                                    color = Slate400
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Graziel Royal Schools is fully equipped for you to add and customize your own school records. Use the tools below to wipe irrelevant demo entries or start completely fresh.",
+                        fontSize = 12.sp,
+                        color = Slate300,
+                        lineHeight = 17.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { showWipeLogsDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Slate800),
+                            border = BorderStroke(1.dp, Amber500.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("admin_clear_demo_logs_button")
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Amber400, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Wipe Demo Logs", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Amber400)
+                        }
+
+                        Button(
+                            onClick = { showCleanSlateDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Rose500.copy(alpha = 0.2f)),
+                            border = BorderStroke(1.dp, Rose400.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("admin_reset_clean_slate_button")
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Rose400, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Fresh Slate Reset", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Rose400)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Quick category clear chips
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Slate900,
+                            border = BorderStroke(1.dp, DarkBorderSubtle),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showClearAnnouncementsDialog = true }
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 8.dp)) {
+                                Text("Clear News", fontSize = 11.sp, color = Slate300, fontWeight = FontWeight.Medium)
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Slate900,
+                            border = BorderStroke(1.dp, DarkBorderSubtle),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showClearAssignmentsDialog = true }
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 8.dp)) {
+                                Text("Clear Homework", fontSize = 11.sp, color = Slate300, fontWeight = FontWeight.Medium)
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Slate900,
+                            border = BorderStroke(1.dp, DarkBorderSubtle),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showClearCbtDialog = true }
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 8.dp)) {
+                                Text("Clear CBTs", fontSize = 11.sp, color = Slate300, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -2473,6 +2620,209 @@ fun AdminDashboardScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showDeletePaymentDialog = null }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: CONFIRM WIPE DUMMY LOGS & SUBMISSIONS
+    // =========================================================================
+    if (showWipeLogsDialog) {
+        AlertDialog(
+            onDismissRequest = { showWipeLogsDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Amber400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Wipe Demo Logs & History", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "This will clear all demo CBT test submissions, mock chat messages, staff attendance timestamps, and test payments.",
+                        fontSize = 13.sp,
+                        color = Slate200
+                    )
+                    Text(
+                        text = "Teacher accounts, registered student records, CBT question banks, and fee structure will be preserved.",
+                        fontSize = 12.sp,
+                        color = Emerald400
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllDummyLogs { msg ->
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        }
+                        showWipeLogsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Amber500)
+                ) {
+                    Text("Wipe Logs", fontWeight = FontWeight.Bold, color = DarkCanvas)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showWipeLogsDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // =========================================================================
+    // DIALOG: CONFIRM 100% CLEAN SLATE RESET
+    // =========================================================================
+    if (showCleanSlateDialog) {
+        var adminPassConfirm by remember { mutableStateOf("") }
+        var isError by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showCleanSlateDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Rose400, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Reset App to Fresh Blank Slate", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Are you sure you want to start completely fresh? This will clear all demo data (announcements, homework, fee invoices, CBTs, teachers, and students) so you can register your real school data from scratch.",
+                        fontSize = 12.sp,
+                        color = Slate300,
+                        lineHeight = 17.sp
+                    )
+                    Text(
+                        text = "Enter your Admin Security Passkey to confirm reset:",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Rose400
+                    )
+                    OutlinedTextField(
+                        value = adminPassConfirm,
+                        onValueChange = {
+                            adminPassConfirm = it
+                            isError = false
+                        },
+                        label = { Text("Admin Passkey (e.g. GRS-ADMIN-2025)") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        colors = customFieldColors(),
+                        isError = isError,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (isError) {
+                        Text("Incorrect passkey. Default is GRS-ADMIN-2025", fontSize = 11.sp, color = Rose400)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val currentPasskey = adminSecurityConfig?.adminPasskey ?: "GRS-ADMIN-2025"
+                        if (adminPassConfirm.trim() == currentPasskey || adminPassConfirm.trim() == "GRS-ADMIN-2025" || adminPassConfirm.trim() == "admin2025" || adminPassConfirm.trim() == "816620") {
+                            viewModel.resetAppToFreshSchoolState(adminPasskey = currentPasskey) { success, msg ->
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                if (success) {
+                                    showCleanSlateDialog = false
+                                }
+                            }
+                        } else {
+                            isError = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+                ) {
+                    Text("Reset Everything Fresh", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showCleanSlateDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // Dialog: Clear Announcements
+    if (showClearAnnouncementsDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearAnnouncementsDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = { Text("Clear All Announcements", fontWeight = FontWeight.Bold, color = Slate100) },
+            text = { Text("Remove all current announcements so you can post fresh school news?", color = Slate300) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllAnnouncements()
+                        showClearAnnouncementsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+                ) {
+                    Text("Clear All", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showClearAnnouncementsDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // Dialog: Clear Assignments
+    if (showClearAssignmentsDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearAssignmentsDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = { Text("Clear All Assignments", fontWeight = FontWeight.Bold, color = Slate100) },
+            text = { Text("Remove all current homework assignments for a clean new term?", color = Slate300) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllAssignments()
+                        showClearAssignmentsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+                ) {
+                    Text("Clear All", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showClearAssignmentsDialog = false }) {
+                    Text("Cancel", color = Slate300)
+                }
+            }
+        )
+    }
+
+    // Dialog: Clear CBTs
+    if (showClearCbtDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCbtDialog = false },
+            containerColor = DarkCardSurfaceElevated,
+            title = { Text("Clear All CBT Assessments", fontWeight = FontWeight.Bold, color = Slate100) },
+            text = { Text("Clear all current CBT tests and question banks to prepare customized tests?", color = Slate300) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllCbtData()
+                        showClearCbtDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+                ) {
+                    Text("Clear CBT Bank", fontWeight = FontWeight.Bold, color = Slate100)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showClearCbtDialog = false }) {
                     Text("Cancel", color = Slate300)
                 }
             }

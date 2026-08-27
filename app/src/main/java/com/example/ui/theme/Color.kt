@@ -24,6 +24,7 @@ val Slate900 = Color(0xFF0F172A)
 val Indigo600 = Color(0xFF4F46E5)
 val Indigo500 = Color(0xFF6366F1)
 val Indigo400 = Color(0xFF818CF8)
+val Indigo300 = Color(0xFFA5B4FC)
 val Indigo900 = Color(0xFF1E1B4B)
 
 val Amber500 = Color(0xFFF59E0B)

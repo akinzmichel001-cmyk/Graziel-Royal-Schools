@@ -62,7 +62,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.model.Announcement
+import com.example.data.model.StudentRecord
+import com.example.ui.components.DashboardQuickAccessSection
+import com.example.ui.components.FeePaymentSummaryCard
+import com.example.ui.components.GlobalDashboardSearchBar
+import com.example.ui.components.PullToRefreshLayout
 import com.example.ui.components.StudentIdCard
+import com.example.ui.components.UserProfileDashboardCard
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
 import com.example.ui.theme.Blue400
@@ -96,22 +102,43 @@ fun HomeScreen(
 ) {
     val announcements by viewModel.announcements.collectAsStateWithLifecycle()
     val assignments by viewModel.assignments.collectAsStateWithLifecycle()
+    val feeItems by viewModel.feeItems.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isDashboardRefreshing.collectAsStateWithLifecycle()
+    val feedbackMessage by viewModel.refreshFeedbackMessage.collectAsStateWithLifecycle()
+    val gradesNotificationEnabled by viewModel.gradesNotificationEnabled.collectAsStateWithLifecycle()
+    val announcementsNotificationEnabled by viewModel.announcementsNotificationEnabled.collectAsStateWithLifecycle()
+    val assignmentsNotificationEnabled by viewModel.assignmentsNotificationEnabled.collectAsStateWithLifecycle()
     val pendingAssignmentsCount = assignments.count { !it.isSubmitted }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkCanvas)
-            .testTag("home_screen_list"),
-        contentPadding = PaddingValues(bottom = 24.dp)
+    PullToRefreshLayout(
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.refreshDashboardData() },
+        feedbackMessage = feedbackMessage,
+        modifier = modifier.fillMaxSize()
     ) {
-        // Hero Campus Banner
-        item {
-            HeroCampusSection(
-                onExploreAdmissions = { viewModel.navigateTo(AppDestination.ADMISSIONS) },
-                onLaunchAi = { viewModel.navigateTo(AppDestination.AI_TUTOR) }
-            )
-        }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(DarkCanvas)
+                .testTag("home_screen_list"),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
+            // Global Dashboard Search Bar (Assignments, Announcements, Subject Details)
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    GlobalDashboardSearchBar(
+                        viewModel = viewModel
+                    )
+                }
+            }
+
+            // Hero Campus Banner
+            item {
+                HeroCampusSection(
+                    onExploreAdmissions = { viewModel.navigateTo(AppDestination.ADMISSIONS) },
+                    onLaunchAi = { viewModel.navigateTo(AppDestination.AI_TUTOR) }
+                )
+            }
 
         // Quick Action Grid
         item {
@@ -120,7 +147,7 @@ fun HomeScreen(
             )
         }
 
-        // Student ID Pass
+        // User Profile View in Dashboard with Avatar & Student Info
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 Row(
@@ -129,7 +156,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "STUDENT IDENTITY PASS",
+                        text = "STUDENT PROFILE & IDENTITY",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Slate400,
@@ -137,16 +164,75 @@ fun HomeScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                StudentIdCard()
+                UserProfileDashboardCard(
+                    studentName = "Adeleke David O.",
+                    studentId = "GRS/2024/0428",
+                    assignedClass = "SS 1 Science",
+                    houseName = "Royal Blue House",
+                    academicStatus = "Active Scholar • Honors",
+                    gpa = "4.85 / 5.0",
+                    attendanceRate = "98.2%",
+                    classPosition = "1st of 34",
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refreshDashboardData() },
+                    onViewFullProfile = {
+                        val student = StudentRecord(
+                            id = 1,
+                            fullName = "Adeleke David O.",
+                            studentId = "GRS/2024/0428",
+                            assignedClass = "SS 1 Science",
+                            parentName = "Chief & Mrs. Adeleke",
+                            parentPhone = "+234 816 620 5113",
+                            parentEmail = "adeleke.family@gmail.com",
+                            passcode = "0428",
+                            dateEnrolled = "Sept 2023",
+                            isActive = true,
+                            gender = "Male",
+                            dob = "14 May 2008",
+                            houseName = "Royal Blue House",
+                            bloodGroup = "O+",
+                            academicStatus = "Active Scholar • Honors",
+                            gpa = "4.85 / 5.0 (Distinction)",
+                            classPosition = "1st of 34 Students",
+                            attendanceRate = "98.2%",
+                            clubAffiliations = "STEM & Robotics (President), Debate Society",
+                            behaviorRemark = "Outstanding leadership, disciplined demeanor, and exemplary academic curiosity.",
+                            emergencyContact = "+234 816 620 5113",
+                            homeAddress = "Plot 12, Royal Palm Estate, Ifo/Ota Axis, Ogun State"
+                        )
+                        viewModel.openStudentProfile(student)
+                    },
+                    onViewIdCard = { viewModel.navigateTo(AppDestination.STUDENT_PORTAL) },
+                    gradesNotificationEnabled = gradesNotificationEnabled,
+                    announcementsNotificationEnabled = announcementsNotificationEnabled,
+                    assignmentsNotificationEnabled = assignmentsNotificationEnabled,
+                    onToggleGrades = { viewModel.setGradesNotificationEnabled(it) },
+                    onToggleAnnouncements = { viewModel.setAnnouncementsNotificationEnabled(it) },
+                    onToggleAssignments = { viewModel.setAssignmentsNotificationEnabled(it) }
+                )
             }
         }
 
-        // Academic & Attendance KPI Highlights
+        // Fee Payment Summary Card (Material 3: Balance, Due Date, and 'Pay Now' CTA)
         item {
-            AcademicHighlightCards(
-                pendingTasks = pendingAssignmentsCount,
-                onViewResults = { viewModel.navigateTo(AppDestination.ACADEMICS) },
-                onViewFees = { viewModel.navigateTo(AppDestination.FINANCE) }
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                FeePaymentSummaryCard(
+                    feeItems = feeItems,
+                    onPayNow = { feeItem ->
+                        viewModel.selectFeeToPay(feeItem)
+                    },
+                    onViewAllFees = {
+                        viewModel.navigateTo(AppDestination.FINANCE)
+                    },
+                    activeTerm = "2nd Term 2024/2025"
+                )
+            }
+        }
+
+        // Quick Access Cards: Report Cards, Attendance & Upcoming Assignments (Material 3)
+        item {
+            DashboardQuickAccessSection(
+                viewModel = viewModel
             )
         }
 
@@ -203,10 +289,53 @@ fun HomeScreen(
             }
         }
 
-        items(announcements, key = { it.id }) { item ->
-            AnnouncementCard(announcement = item)
+        if (announcements.isEmpty()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, DarkBorderSubtle),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = Slate500,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "No Announcements Yet",
+                            fontWeight = FontWeight.Bold,
+                            color = Slate200,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "School news, official circulars, and term updates published by the administration will appear right here.",
+                            color = Slate400,
+                            fontSize = 11.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            items(announcements, key = { it.id }) { item ->
+                AnnouncementCard(announcement = item)
+            }
         }
     }
+}
 }
 
 @Composable

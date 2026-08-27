@@ -99,6 +99,9 @@ interface SchoolDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAnnouncements(announcements: List<Announcement>)
 
+    @Query("DELETE FROM announcements WHERE id = :id")
+    suspend fun deleteAnnouncement(id: Int)
+
     // Assignments
     @Query("SELECT * FROM assignments ORDER BY id DESC")
     fun getAllAssignments(): Flow<List<Assignment>>
@@ -111,6 +114,9 @@ interface SchoolDao {
 
     @Update
     suspend fun updateAssignment(assignment: Assignment)
+
+    @Query("DELETE FROM assignments WHERE id = :id")
+    suspend fun deleteAssignment(id: Int)
 
     // Fees
     @Query("SELECT * FROM fee_items ORDER BY isPaid ASC, id ASC")
@@ -177,6 +183,15 @@ interface SchoolDao {
     @Query("UPDATE cbt_tests SET isResultsPublished = :isPublished WHERE id = :testId")
     suspend fun updateCbtPublishStatus(testId: Int, isPublished: Boolean)
 
+    @Query("DELETE FROM cbt_tests WHERE id = :testId")
+    suspend fun deleteCbtTest(testId: Int)
+
+    @Query("DELETE FROM cbt_questions WHERE testId = :testId")
+    suspend fun deleteQuestionsForTest(testId: Int)
+
+    @Query("DELETE FROM cbt_submissions WHERE testId = :testId")
+    suspend fun deleteSubmissionsForTest(testId: Int)
+
     // CBT Questions
     @Query("SELECT * FROM cbt_questions WHERE testId = :testId ORDER BY questionNumber ASC")
     fun getQuestionsForTest(testId: Int): Flow<List<CbtQuestion>>
@@ -237,4 +252,44 @@ interface SchoolDao {
 
     @Query("DELETE FROM group_chat_messages WHERE channelId = :channelId")
     suspend fun clearChannelMessages(channelId: String)
+
+    // Clean Slate & Bulk Deletion Operations for School Administration
+    @Query("DELETE FROM announcements")
+    suspend fun deleteAllAnnouncements()
+
+    @Query("DELETE FROM assignments")
+    suspend fun deleteAllAssignments()
+
+    @Query("DELETE FROM fee_items")
+    suspend fun deleteAllFeeItems()
+
+    @Query("DELETE FROM payment_transactions")
+    suspend fun deleteAllPayments()
+
+    @Query("DELETE FROM admission_applications")
+    suspend fun deleteAllAdmissionApplications()
+
+    @Query("DELETE FROM attendance_records")
+    suspend fun deleteAllAttendanceRecords()
+
+    @Query("DELETE FROM cbt_tests")
+    suspend fun deleteAllCbtTests()
+
+    @Query("DELETE FROM cbt_questions")
+    suspend fun deleteAllCbtQuestions()
+
+    @Query("DELETE FROM cbt_submissions")
+    suspend fun deleteAllCbtSubmissions()
+
+    @Query("DELETE FROM staff_clock_records")
+    suspend fun deleteAllStaffClockRecords()
+
+    @Query("DELETE FROM group_chat_messages")
+    suspend fun deleteAllGroupChatMessages()
+
+    @Query("DELETE FROM student_records")
+    suspend fun deleteAllStudentRecords()
+
+    @Query("DELETE FROM teacher_accounts")
+    suspend fun deleteAllTeacherAccounts()
 }

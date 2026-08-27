@@ -1,6 +1,7 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -186,6 +187,16 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     private val _mutedUsers = MutableStateFlow<Set<String>>(emptySet())
     val mutedUsers: StateFlow<Set<String>> = _mutedUsers.asStateFlow()
 
+    // Pull to refresh dashboard state & timestamps
+    private val _isDashboardRefreshing = MutableStateFlow(false)
+    val isDashboardRefreshing: StateFlow<Boolean> = _isDashboardRefreshing.asStateFlow()
+
+    private val _lastRefreshTimestamp = MutableStateFlow(System.currentTimeMillis())
+    val lastRefreshTimestamp: StateFlow<Long> = _lastRefreshTimestamp.asStateFlow()
+
+    private val _refreshFeedbackMessage = MutableStateFlow<String?>(null)
+    val refreshFeedbackMessage: StateFlow<String?> = _refreshFeedbackMessage.asStateFlow()
+
     // Report approval state in memory
     private val _isReportCardApproved = MutableStateFlow(true)
     val isReportCardApproved: StateFlow<Boolean> = _isReportCardApproved.asStateFlow()
@@ -193,7 +204,29 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     private val _isReportCardPublished = MutableStateFlow(true)
     val isReportCardPublished: StateFlow<Boolean> = _isReportCardPublished.asStateFlow()
 
+    // Persistent Push Notification Preferences
+    private val notificationSharedPrefs by lazy {
+        getApplication<Application>().getSharedPreferences("grs_notification_prefs", Context.MODE_PRIVATE)
+    }
+
+    private val _gradesNotificationEnabled = MutableStateFlow(true)
+    val gradesNotificationEnabled: StateFlow<Boolean> = _gradesNotificationEnabled.asStateFlow()
+
+    private val _announcementsNotificationEnabled = MutableStateFlow(true)
+    val announcementsNotificationEnabled: StateFlow<Boolean> = _announcementsNotificationEnabled.asStateFlow()
+
+    private val _assignmentsNotificationEnabled = MutableStateFlow(true)
+    val assignmentsNotificationEnabled: StateFlow<Boolean> = _assignmentsNotificationEnabled.asStateFlow()
+
+    private val _showNotificationPreferencesModal = MutableStateFlow(false)
+    val showNotificationPreferencesModal: StateFlow<Boolean> = _showNotificationPreferencesModal.asStateFlow()
+
     init {
+        // Load initial notification preferences
+        _gradesNotificationEnabled.value = notificationSharedPrefs.getBoolean("pref_grades_push", true)
+        _announcementsNotificationEnabled.value = notificationSharedPrefs.getBoolean("pref_announcements_push", true)
+        _assignmentsNotificationEnabled.value = notificationSharedPrefs.getBoolean("pref_assignments_push", true)
+
         val db = SchoolDatabase.getDatabase(application)
         repository = SchoolRepository(db.schoolDao())
 
@@ -323,6 +356,31 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
             UserRole.STUDENT -> _currentDestination.value = AppDestination.STUDENT_PORTAL
             UserRole.PARENT -> _currentDestination.value = AppDestination.PARENT_PORTAL
             UserRole.GUEST_PROSPECTIVE -> _currentDestination.value = AppDestination.ADMISSIONS
+        }
+    }
+
+    /**
+     * Pull-to-refresh handler:
+     * Manually updates student information, assignment statuses, attendance metrics, and announcements.
+     */
+    fun refreshDashboardData(onComplete: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            _isDashboardRefreshing.value = true
+            _refreshFeedbackMessage.value = "Updating student info & assignments..."
+            kotlinx.coroutines.delay(1000)
+
+            // Re-sync local and remote repository data
+            repository.seedInitialDataIfEmpty()
+
+            _lastRefreshTimestamp.value = System.currentTimeMillis()
+            _refreshFeedbackMessage.value = "Student info & assignments up to date"
+            _isDashboardRefreshing.value = false
+            onComplete?.invoke()
+
+            kotlinx.coroutines.delay(3000)
+            if (_refreshFeedbackMessage.value?.contains("up to date") == true) {
+                _refreshFeedbackMessage.value = null
+            }
         }
     }
 
@@ -1528,6 +1586,99 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
         publishAnnouncement(title, category, summary, targetAudience)
     }
 
+    fun deleteAnnouncement(announcementId: Int) {
+        viewModelScope.launch {
+            repository.deleteAnnouncement(announcementId)
+            Toast.makeText(getApplication(), "Announcement removed.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun deleteAssignment(assignmentId: Int) {
+        viewModelScope.launch {
+            repository.deleteAssignment(assignmentId)
+            if (_selectedAssignment.value?.id == assignmentId) {
+                _selectedAssignment.value = null
+            }
+            Toast.makeText(getApplication(), "Assignment deleted.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun deleteCbtTest(testId: Int) {
+        viewModelScope.launch {
+            repository.deleteCbtTest(testId)
+            Toast.makeText(getApplication(), "CBT Test assessment deleted.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Clears all dummy/sample logs (attendance history, test submissions, chat logs, past transactions)
+     * so that the school has a clean slate for real students.
+     */
+    fun clearAllDummyLogs(onComplete: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.clearDummyLogsAndSubmissions()
+                val msg = "All dummy logs, submissions, chats, and payment records have been cleared."
+                Toast.makeText(getApplication(), msg, Toast.LENGTH_LONG).show()
+                onComplete(msg)
+            } catch (e: Exception) {
+                val err = "Failed to clear logs: ${e.message}"
+                Toast.makeText(getApplication(), err, Toast.LENGTH_SHORT).show()
+                onComplete(err)
+            }
+        }
+    }
+
+    /**
+     * Complete Fresh State Reset: clears all demo data across all tables and establishes
+     * a pristine, fresh session for Graziel Royal Schools.
+     */
+    fun resetAppToFreshSchoolState(
+        adminPasskey: String = "GRS-ADMIN-2025",
+        onComplete: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.resetToFreshSchoolState(adminPasskey = adminPasskey)
+                val msg = "App successfully reset to a pristine clean slate for Graziel Royal Schools. All demo records removed."
+                Toast.makeText(getApplication(), msg, Toast.LENGTH_LONG).show()
+                onComplete(true, msg)
+            } catch (e: Exception) {
+                val err = "Reset error: ${e.message}"
+                Toast.makeText(getApplication(), err, Toast.LENGTH_SHORT).show()
+                onComplete(false, err)
+            }
+        }
+    }
+
+    fun clearAllAnnouncements() {
+        viewModelScope.launch {
+            repository.clearAllAnnouncements()
+            Toast.makeText(getApplication(), "All announcements cleared.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun clearAllAssignments() {
+        viewModelScope.launch {
+            repository.clearAllAssignments()
+            Toast.makeText(getApplication(), "All assignments cleared.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun clearAllFeeItems() {
+        viewModelScope.launch {
+            repository.clearAllFeeItems()
+            Toast.makeText(getApplication(), "All fee items cleared.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun clearAllCbtData() {
+        viewModelScope.launch {
+            repository.clearAllCbtData()
+            Toast.makeText(getApplication(), "All CBT tests and questions cleared.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun updateAiSpecification(newSpec: AiTutorSpecification) {
         _aiTutorSpecification.value = newSpec
         Toast.makeText(getApplication(), "AI Tutor tailored to ${newSpec.userRole} (${newSpec.gradeLevel})", Toast.LENGTH_SHORT).show()
@@ -1618,5 +1769,46 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
                 onComplete(false, errorMsg)
             }
         }
+    }
+
+    // =========================================================================
+    // PUSH NOTIFICATION PREFERENCES MANAGEMENT
+    // =========================================================================
+
+    fun openNotificationPreferencesModal() {
+        _showNotificationPreferencesModal.value = true
+    }
+
+    fun closeNotificationPreferencesModal() {
+        _showNotificationPreferencesModal.value = false
+    }
+
+    fun setGradesNotificationEnabled(enabled: Boolean) {
+        _gradesNotificationEnabled.value = enabled
+        notificationSharedPrefs.edit().putBoolean("pref_grades_push", enabled).apply()
+    }
+
+    fun setAnnouncementsNotificationEnabled(enabled: Boolean) {
+        _announcementsNotificationEnabled.value = enabled
+        notificationSharedPrefs.edit().putBoolean("pref_announcements_push", enabled).apply()
+    }
+
+    fun setAssignmentsNotificationEnabled(enabled: Boolean) {
+        _assignmentsNotificationEnabled.value = enabled
+        notificationSharedPrefs.edit().putBoolean("pref_assignments_push", enabled).apply()
+    }
+
+    fun toggleGradesNotification() {
+        val newState = !_gradesNotificationEnabled.value
+        setGradesNotificationEnabled(newState)
+        val status = if (newState) "enabled" else "disabled"
+        Toast.makeText(getApplication(), "Grade & score alerts $status", Toast.LENGTH_SHORT).show()
+    }
+
+    fun toggleAnnouncementsNotification() {
+        val newState = !_announcementsNotificationEnabled.value
+        setAnnouncementsNotificationEnabled(newState)
+        val status = if (newState) "enabled" else "disabled"
+        Toast.makeText(getApplication(), "Announcement push notifications $status", Toast.LENGTH_SHORT).show()
     }
 }

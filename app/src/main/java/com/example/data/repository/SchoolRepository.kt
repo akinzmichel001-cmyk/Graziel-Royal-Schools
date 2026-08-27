@@ -1079,8 +1079,22 @@ class SchoolRepository(private val dao: SchoolDao) {
         dao.insertAnnouncement(announcement)
     }
 
+    suspend fun deleteAnnouncement(announcementId: Int) {
+        dao.deleteAnnouncement(announcementId)
+    }
+
     suspend fun addAssignment(assignment: Assignment) {
         dao.insertAssignment(assignment)
+    }
+
+    suspend fun deleteAssignment(assignmentId: Int) {
+        dao.deleteAssignment(assignmentId)
+    }
+
+    suspend fun deleteCbtTest(testId: Int) {
+        dao.deleteSubmissionsForTest(testId)
+        dao.deleteQuestionsForTest(testId)
+        dao.deleteCbtTest(testId)
     }
 
     suspend fun updateAssignmentFull(assignment: Assignment) {
@@ -1237,5 +1251,79 @@ class SchoolRepository(private val dao: SchoolDao) {
                 TimetablePeriod(7, "12:30 - 01:30 PM", "School Dismissal & Weekend Pickup", "-", "Main Gate", isBreak = true)
             )
         }
+    }
+
+    // Clean Slate & School Data Management Operations
+    suspend fun clearAllAnnouncements() = dao.deleteAllAnnouncements()
+    suspend fun clearAllAssignments() = dao.deleteAllAssignments()
+    suspend fun clearAllFeeItems() = dao.deleteAllFeeItems()
+    suspend fun clearAllPayments() = dao.deleteAllPayments()
+    suspend fun clearAllAttendanceRecords() = dao.deleteAllAttendanceRecords()
+    suspend fun clearAllStaffClockRecords() = dao.deleteAllStaffClockRecords()
+    suspend fun clearAllCbtData() {
+        dao.deleteAllCbtSubmissions()
+        dao.deleteAllCbtQuestions()
+        dao.deleteAllCbtTests()
+    }
+    suspend fun clearAllGroupChatMessages() = dao.deleteAllGroupChatMessages()
+    suspend fun clearAllStudentRecords() = dao.deleteAllStudentRecords()
+    suspend fun clearAllTeacherAccounts() = dao.deleteAllTeacherAccounts()
+
+    /**
+     * Clears all temporary/mock operational logs (CBT submissions, chat messages, clock logs, attendance, payments)
+     * leaving school profiles clean for fresh school use.
+     */
+    suspend fun clearDummyLogsAndSubmissions() {
+        dao.deleteAllCbtSubmissions()
+        dao.deleteAllGroupChatMessages()
+        dao.deleteAllStaffClockRecords()
+        dao.deleteAllAttendanceRecords()
+        dao.deleteAllPayments()
+        dao.deleteAllAdmissionApplications()
+    }
+
+    /**
+     * Resets the app to a 100% fresh, blank slate for Graziel Royal Schools.
+     * Removes all demo announcements, assignments, CBT tests, fee items, and demo students/teachers.
+     * Retains or establishes the verified Admin Security Config.
+     */
+    suspend fun resetToFreshSchoolState(
+        adminPasskey: String = "GRS-ADMIN-2025",
+        adminName: String = "Mr. Tobi Adebayo",
+        adminEmail: String = "admin@grazielroyalschools.edu.ng",
+        adminPhone: String = "+234 816 620 5113",
+        activeTerm: String = "1st Term",
+        activeSession: String = "2025/2026",
+        bankName: String = "Monie Point",
+        bankAccountNumber: String = "5255883539",
+        bankAccountName: String = "Graziel Royal Schools Ltd."
+    ) {
+        dao.deleteAllAnnouncements()
+        dao.deleteAllAssignments()
+        dao.deleteAllFeeItems()
+        dao.deleteAllPayments()
+        dao.deleteAllAdmissionApplications()
+        dao.deleteAllAttendanceRecords()
+        dao.deleteAllCbtSubmissions()
+        dao.deleteAllCbtQuestions()
+        dao.deleteAllCbtTests()
+        dao.deleteAllStaffClockRecords()
+        dao.deleteAllGroupChatMessages()
+        dao.deleteAllStudentRecords()
+        dao.deleteAllTeacherAccounts()
+
+        val freshAdminConfig = AdminSecurityConfig(
+            id = 1,
+            adminPasskey = adminPasskey,
+            adminName = adminName,
+            adminEmail = adminEmail,
+            adminPhone = adminPhone,
+            activeTerm = activeTerm,
+            activeSession = activeSession,
+            bankName = bankName,
+            bankAccountNumber = bankAccountNumber,
+            bankAccountName = bankAccountName
+        )
+        dao.insertAdminSecurityConfig(freshAdminConfig)
     }
 }

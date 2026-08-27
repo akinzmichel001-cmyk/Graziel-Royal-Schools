@@ -58,7 +58,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.model.StudentRecord
+import com.example.ui.components.DashboardQuickAccessSection
+import com.example.ui.components.FeePaymentSummaryCard
+import com.example.ui.components.GlobalDashboardSearchBar
+import com.example.ui.components.PullToRefreshLayout
 import com.example.ui.components.StudentIdCard
+import com.example.ui.components.UserProfileDashboardCard
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
 import com.example.ui.theme.DarkBorder
@@ -91,95 +96,94 @@ fun StudentPortalScreen(
     val cbtTests by viewModel.cbtTests.collectAsStateWithLifecycle()
     val cbtSubmissions by viewModel.cbtSubmissions.collectAsStateWithLifecycle()
     val assignments by viewModel.assignments.collectAsStateWithLifecycle()
+    val feeItems by viewModel.feeItems.collectAsStateWithLifecycle()
     val isReportApproved by viewModel.isReportCardApproved.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isDashboardRefreshing.collectAsStateWithLifecycle()
+    val feedbackMessage by viewModel.refreshFeedbackMessage.collectAsStateWithLifecycle()
+    val gradesNotificationEnabled by viewModel.gradesNotificationEnabled.collectAsStateWithLifecycle()
+    val announcementsNotificationEnabled by viewModel.announcementsNotificationEnabled.collectAsStateWithLifecycle()
+    val assignmentsNotificationEnabled by viewModel.assignmentsNotificationEnabled.collectAsStateWithLifecycle()
 
     val liveCbtTests = cbtTests.filter { it.isLive }
     val mySubmissions = cbtSubmissions.filter {
         it.studentReg == (currentUser?.regOrStaffId ?: "GRS/2024/0428") || cbtTests.any { t -> t.id == it.testId && t.isResultsPublished }
     }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkCanvas)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    PullToRefreshLayout(
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.refreshDashboardData() },
+        feedbackMessage = feedbackMessage,
+        modifier = modifier.fillMaxSize()
     ) {
-        item {
-            Spacer(modifier = Modifier.height(4.dp))
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(DarkCanvas)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Global Search Bar for quick search across assignments, notices, subjects
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                GlobalDashboardSearchBar(
+                    viewModel = viewModel
+                )
+            }
 
-            // Student Digital ID Card
-            StudentIdCard(
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+
+            // Student User Profile Dashboard View with Avatar
+            UserProfileDashboardCard(
                 studentName = currentUser?.fullName ?: "Adeleke David Oluwaseun",
-                regNumber = currentUser?.regOrStaffId ?: "GRS/2024/0428",
-                studentClass = currentUser?.assignedClass ?: "SS 1 Science",
-                house = "Sapphire Blue House",
-                session = "2024/2025 Session • Term 2",
+                studentId = currentUser?.regOrStaffId ?: "GRS/2024/0428",
+                assignedClass = currentUser?.assignedClass ?: "SS 1 Science",
+                houseName = "Sapphire Blue House",
+                academicStatus = "Active Scholar • Distinction",
+                gpa = "4.85 / 5.0",
+                attendanceRate = "98.5%",
+                classPosition = "1st of 34",
+                parentName = "Chief & Mrs. Adeleke",
+                emergencyContact = "+234 816 620 5113",
+                clubAffiliation = "STEM & Robotics (President)",
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refreshDashboardData() },
+                onViewFullProfile = {
+                    val student = StudentRecord(
+                        id = 1,
+                        fullName = currentUser?.fullName ?: "Adeleke David Oluwaseun",
+                        studentId = currentUser?.regOrStaffId ?: "GRS/2024/0428",
+                        assignedClass = currentUser?.assignedClass ?: "SS 1 Science",
+                        parentName = "Chief & Mrs. Adeleke",
+                        parentPhone = "+234 816 620 5113",
+                        parentEmail = "adeleke.family@gmail.com",
+                        passcode = "0428",
+                        dateEnrolled = "Sept 2023",
+                        isActive = true,
+                        gender = "Male",
+                        dob = "14 April 2008",
+                        houseName = "Sapphire Blue House",
+                        bloodGroup = "O+",
+                        academicStatus = "Active Scholar • Distinction",
+                        gpa = "4.85 / 5.0 (Distinction)",
+                        classPosition = "1st of 34 Students",
+                        attendanceRate = "98.5%",
+                        clubAffiliations = "STEM & Robotics (President), Debate Society",
+                        behaviorRemark = "Exemplary scholar with strong aptitude in STEM disciplines.",
+                        emergencyContact = "+234 816 620 5113",
+                        homeAddress = "14, Royal Palm Estate, Ifo, Ogun State"
+                    )
+                    viewModel.openStudentProfile(student)
+                },
+                onViewIdCard = { viewModel.setShowReportCardDetail(true) },
+                gradesNotificationEnabled = gradesNotificationEnabled,
+                announcementsNotificationEnabled = announcementsNotificationEnabled,
+                assignmentsNotificationEnabled = assignmentsNotificationEnabled,
+                onToggleGrades = { viewModel.setGradesNotificationEnabled(it) },
+                onToggleAnnouncements = { viewModel.setAnnouncementsNotificationEnabled(it) },
+                onToggleAssignments = { viewModel.setAssignmentsNotificationEnabled(it) },
                 modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Official Profile & Academic Dossier Quick Access
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = DarkCardSurface,
-                border = BorderStroke(1.dp, Indigo500.copy(alpha = 0.4f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val student = StudentRecord(
-                            id = 1,
-                            fullName = currentUser?.fullName ?: "Adeleke David Oluwaseun",
-                            studentId = currentUser?.regOrStaffId ?: "GRS/2024/0428",
-                            assignedClass = currentUser?.assignedClass ?: "SS 1 Science",
-                            parentName = "Dr. & Mrs. Adeleke",
-                            parentPhone = "+234 803 123 4567",
-                            parentEmail = "adeleke.family@gmail.com",
-                            passcode = "0428",
-                            dateEnrolled = "Sept 2023",
-                            isActive = true,
-                            gender = "Male",
-                            dob = "14 April 2008",
-                            houseName = "Sapphire Blue House",
-                            bloodGroup = "O+",
-                            academicStatus = "Active (Good Standing)",
-                            gpa = "4.65 / 5.0 (Distinction)",
-                            classPosition = "2nd of 34 Students",
-                            attendanceRate = "98.5%",
-                            clubAffiliations = "Junior Engineers & Technicians (JETS), Robotics Club",
-                            behaviorRemark = "Exemplary scholar with strong aptitude in STEM disciplines.",
-                            emergencyContact = "+234 803 123 4567",
-                            homeAddress = "14, Royal Palm Estate, Ifo, Ogun State"
-                        )
-                        viewModel.openStudentProfile(student)
-                    }
-                    .testTag("student_view_profile_dossier_btn")
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Indigo500.copy(alpha = 0.2f),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.School, contentDescription = null, tint = Indigo400, modifier = Modifier.size(20.dp))
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text("Official Student Profile & Dossier", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Slate100)
-                            Text("Biodata • Academic Status • Class & Form Master", fontSize = 11.sp, color = Indigo400)
-                        }
-                    }
-                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Slate400, modifier = Modifier.size(18.dp))
-                }
-            }
         }
 
         // Section: Live CBT Exam Banner (Crucial Requirement)
@@ -288,6 +292,22 @@ fun StudentPortalScreen(
             }
         }
 
+        // Section: Fee Payment Summary Card (Material 3: Balance, Due Date, Pay Now Action)
+        item {
+            FeePaymentSummaryCard(
+                feeItems = feeItems,
+                onPayNow = { feeItem ->
+                    viewModel.selectFeeToPay(feeItem)
+                },
+                onViewAllFees = {
+                    viewModel.navigateTo(AppDestination.FINANCE)
+                },
+                studentName = currentUser?.fullName ?: "Adeleke David Oluwaseun",
+                studentId = currentUser?.regOrStaffId ?: "GRS/2024/0428",
+                activeTerm = "2nd Term 2024/2025"
+            )
+        }
+
         // Section: Quick Academic Actions (Class Chat, AI Tutor, Homework, Timetable)
         item {
             Row(
@@ -392,115 +412,13 @@ fun StudentPortalScreen(
             }
         }
 
-        // Section: Official Approved Report Card
+        // Section: Material 3 Quick Access Cards (Report Cards, Attendance & Upcoming Assignments)
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, DarkBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Grade, contentDescription = null, tint = Indigo400, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Official Term Report Card", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Slate100)
-                        }
-
-                        if (isReportApproved) {
-                            Surface(shape = RoundedCornerShape(8.dp), color = Emerald500.copy(alpha = 0.2f)) {
-                                Text("Admin Approved", color = Emerald400, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "Complete Continuous Assessment (CA1 & CA2), term examination grades, GPA, and teacher remarks.",
-                        fontSize = 12.sp,
-                        color = Slate400,
-                        lineHeight = 16.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = { viewModel.setShowReportCardDetail(true) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("View Official Stamped Report Card", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
-        // Section: Pending Homework & Assignments
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, DarkBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Assignment, contentDescription = null, tint = Amber400, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Homework & Study Tasks", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Slate100)
-                        }
-
-                        Text("${assignments.count { !it.isSubmitted }} Due", fontSize = 11.sp, color = Amber400, fontWeight = FontWeight.Bold)
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    assignments.take(2).forEach { assignment ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .background(Slate900, RoundedCornerShape(8.dp))
-                                .border(BorderStroke(1.dp, DarkBorderSubtle), RoundedCornerShape(8.dp))
-                                .clickable { viewModel.selectAssignment(assignment) }
-                                .padding(10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(assignment.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Slate100)
-                                Text("${assignment.subject} • Due: ${assignment.dueDate}", fontSize = 11.sp, color = Slate400)
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (assignment.isSubmitted) Emerald500.copy(alpha = 0.2f) else Slate800
-                            ) {
-                                Text(
-                                    text = if (assignment.isSubmitted) "Submitted" else "Submit",
-                                    fontSize = 11.sp,
-                                    color = if (assignment.isSubmitted) Emerald400 else Indigo400,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
+            DashboardQuickAccessSection(
+                viewModel = viewModel
+            )
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
 }

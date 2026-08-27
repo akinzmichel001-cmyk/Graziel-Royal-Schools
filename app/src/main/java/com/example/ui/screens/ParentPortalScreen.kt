@@ -62,6 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.ui.components.DashboardQuickAccessSection
+import com.example.ui.components.FeePaymentSummaryCard
+import com.example.ui.components.PullToRefreshLayout
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
 import com.example.ui.theme.DarkBorder
@@ -118,15 +121,24 @@ fun ParentPortalScreen(
         cbtTests.any { it.id == sub.testId && it.isResultsPublished } || sub.isReviewedByTeacher
     }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkCanvas)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    val isRefreshing by viewModel.isDashboardRefreshing.collectAsStateWithLifecycle()
+    val feedbackMessage by viewModel.refreshFeedbackMessage.collectAsStateWithLifecycle()
+
+    PullToRefreshLayout(
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.refreshDashboardData() },
+        feedbackMessage = feedbackMessage,
+        modifier = modifier.fillMaxSize()
     ) {
-        item {
-            Spacer(modifier = Modifier.height(4.dp))
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(DarkCanvas)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
 
             // Parent & Ward Banner
             Card(
@@ -236,6 +248,22 @@ fun ParentPortalScreen(
                     }
                 }
             }
+        }
+
+        // Section: Fee Payment Summary Card (Material 3: Balance, Due Date & 'Pay Now' CTA)
+        item {
+            FeePaymentSummaryCard(
+                feeItems = parentFeeItems,
+                onPayNow = { feeItem ->
+                    viewModel.selectFeeToPay(feeItem)
+                },
+                onViewAllFees = {
+                    viewModel.navigateTo(AppDestination.FINANCE)
+                },
+                studentName = currentUser?.childName ?: "Adeleke David Oluwaseun",
+                studentId = currentUser?.childRegNumber ?: "GRS/2024/0428",
+                activeTerm = "2nd Term 2024/2025"
+            )
         }
 
         // Section: Outstanding School Fees & Bills (Parent Only)
@@ -450,54 +478,11 @@ fun ParentPortalScreen(
             }
         }
 
-        // Section: Term Report Card
+        // Section: Material 3 Academic & Attendance Quick Access (Report Card, Attendance & Assignments)
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, DarkBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Grade, contentDescription = null, tint = Emerald400, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Official Approved Report Card", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Slate100)
-                        }
-
-                        Surface(shape = RoundedCornerShape(8.dp), color = Emerald500.copy(alpha = 0.2f)) {
-                            Text("Principal Endorsed", color = Emerald400, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "Access your ward's verified Continuous Assessment (CA), Examination scores, class position, and conduct remarks.",
-                        fontSize = 12.sp,
-                        color = Slate400,
-                        lineHeight = 16.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = { viewModel.setShowReportCardDetail(true) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("parent_view_report_card_button")
-                    ) {
-                        Text("View & Print Full Report Card", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            DashboardQuickAccessSection(
+                viewModel = viewModel
+            )
         }
 
         // Section: School Announcements
@@ -549,4 +534,5 @@ fun ParentPortalScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
 }
