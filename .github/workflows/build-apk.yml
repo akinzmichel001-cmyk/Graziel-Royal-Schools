@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - master
   workflow_dispatch:
 
 permissions:
@@ -55,6 +56,9 @@ jobs:
         run: |
           if [ -f "./debug.keystore" ]; then
             echo "Existing debug.keystore found."
+          elif [ -f "./debug.keystore.base64" ]; then
+            echo "Decoding debug.keystore from debug.keystore.base64..."
+            base64 -d ./debug.keystore.base64 > ./debug.keystore
           else
             echo "Generating temporary debug keystore..."
             keytool -genkey -v \
