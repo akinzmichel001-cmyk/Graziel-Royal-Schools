@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Print
@@ -111,6 +112,7 @@ import com.example.data.model.StudentRecord
 import com.example.data.model.SubjectGrade
 import com.example.data.model.TermReport
 import com.example.data.model.UserRole
+import com.example.ui.components.NotificationPreferencesModal
 import com.example.ui.theme.Amber400
 import com.example.ui.theme.Amber500
 import com.example.ui.theme.DarkBorder
@@ -177,6 +179,7 @@ fun StudentProfileScreen(
     var showPromoteClassDialog by remember { mutableStateOf(false) }
     var showEditRemarksDialog by remember { mutableStateOf(false) }
     var showDossierSummaryDialog by remember { mutableStateOf(false) }
+    var showNotificationPreferencesDialog by remember { mutableStateOf(false) }
 
     fun copyToClipboard(label: String, text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -287,6 +290,16 @@ fun StudentProfileScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { showNotificationPreferencesDialog = true },
+                        modifier = Modifier.testTag("student_profile_notifications_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notification Settings",
+                            tint = Indigo400
+                        )
+                    }
                     IconButton(
                         onClick = { showDossierSummaryDialog = true },
                         modifier = Modifier.testTag("student_profile_share_dossier_button")
@@ -1335,6 +1348,24 @@ fun StudentProfileScreen(
                     Text("Close", color = Slate400)
                 }
             }
+        )
+    }
+
+    if (showNotificationPreferencesDialog) {
+        val gradesNotificationEnabled by viewModel.gradesNotificationEnabled.collectAsStateWithLifecycle()
+        val announcementsNotificationEnabled by viewModel.announcementsNotificationEnabled.collectAsStateWithLifecycle()
+        val assignmentsNotificationEnabled by viewModel.assignmentsNotificationEnabled.collectAsStateWithLifecycle()
+
+        NotificationPreferencesModal(
+            gradesEnabled = gradesNotificationEnabled,
+            announcementsEnabled = announcementsNotificationEnabled,
+            assignmentsEnabled = assignmentsNotificationEnabled,
+            onToggleGrades = { viewModel.setGradesNotificationEnabled(it) },
+            onToggleAnnouncements = { viewModel.setAnnouncementsNotificationEnabled(it) },
+            onToggleAssignments = { viewModel.setAssignmentsNotificationEnabled(it) },
+            studentName = activeStudent.fullName,
+            studentClass = activeStudent.assignedClass,
+            onDismiss = { showNotificationPreferencesDialog = false }
         )
     }
 }

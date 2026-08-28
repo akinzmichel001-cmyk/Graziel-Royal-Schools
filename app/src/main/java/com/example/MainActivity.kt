@@ -1,10 +1,15 @@
 package com.example
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
@@ -13,12 +18,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.UserRole
 import com.example.ui.components.AssignmentSubmitDialog
+import com.example.ui.components.NotificationPreferencesModal
 import com.example.ui.components.PaymentDialog
 import com.example.ui.components.ReceiptDialog
 import com.example.ui.components.ReportCardSheet
@@ -68,12 +77,47 @@ class MainActivity : ComponentActivity() {
 fun GrazielRoyalApp(
     viewModel: SchoolViewModel
 ) {
+    val context = LocalContext.current
     val currentDestination by viewModel.currentDestination.collectAsStateWithLifecycle()
     val currentRole by viewModel.currentRole.collectAsStateWithLifecycle()
     val selectedFeeToPay by viewModel.selectedFeeToPay.collectAsStateWithLifecycle()
     val activeReceipt by viewModel.activeReceipt.collectAsStateWithLifecycle()
     val showReportCardDetail by viewModel.showReportCardDetail.collectAsStateWithLifecycle()
     val selectedAssignment by viewModel.selectedAssignment.collectAsStateWithLifecycle()
+    val showNotificationModal by viewModel.showNotificationPreferencesModal.collectAsStateWithLifecycle()
+    val gradesNotificationEnabled by viewModel.gradesNotificationEnabled.collectAsStateWithLifecycle()
+    val announcementsNotificationEnabled by viewModel.announcementsNotificationEnabled.collectAsStateWithLifecycle()
+    val assignmentsNotificationEnabled by viewModel.assignmentsNotificationEnabled.collectAsStateWithLifecycle()
+    val selectedStudent by viewModel.selectedStudentForProfile.collectAsStateWithLifecycle()
+    val studentRecords by viewModel.studentRecords.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+
+    val displayStudentName = selectedStudent?.fullName
+        ?: studentRecords.firstOrNull { it.studentId == (currentUser?.regOrStaffId ?: currentUser?.childRegNumber) }?.fullName
+        ?: currentUser?.fullName
+        ?: "Adeleke David O."
+
+    val displayStudentClass = selectedStudent?.assignedClass
+        ?: studentRecords.firstOrNull { it.studentId == (currentUser?.regOrStaffId ?: currentUser?.childRegNumber) }?.assignedClass
+        ?: currentUser?.assignedClass
+        ?: "SS 1 Science"
+
+    // Android 13+ (API 33+) Notification Permission Request Handler
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasPermission) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     val isAuthScreen = currentDestination == AppDestination.AUTH
 
@@ -179,6 +223,20 @@ fun GrazielRoyalApp(
                     onSubmit = { id, text ->
                         viewModel.submitAssignmentSolution(id, text)
                     }
+                )
+            }
+
+            if (showNotificationModal) {
+                NotificationPreferencesModal(
+                    gradesEnabled = gradesNotificationEnabled,
+                    announcementsEnabled = announcementsNotificationEnabled,
+                    assignmentsEnabled = assignmentsNotificationEnabled,
+                    onToggleGrades = { viewModel.setGradesNotificationEnabled(it) },
+                    onToggleAnnouncements = { viewModel.setAnnouncementsNotificationEnabled(it) },
+                    onToggleAssignments = { viewModel.setAssignmentsNotificationEnabled(it) },
+                    studentName = displayStudentName,
+                    studentClass = displayStudentClass,
+                    onDismiss = { viewModel.closeNotificationPreferencesModal() }
                 )
             }
         }

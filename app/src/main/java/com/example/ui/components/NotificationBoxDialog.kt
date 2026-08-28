@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -190,13 +191,39 @@ fun NotificationBoxDialog(
                         }
                     }
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(Slate800, CircleShape)
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Slate300, modifier = Modifier.size(18.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                viewModel.openNotificationPreferencesModal()
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(Slate800, CircleShape)
+                                .testTag("btn_notification_box_settings")
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Notification Settings",
+                                tint = Indigo400,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(Slate800, CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Slate300,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
